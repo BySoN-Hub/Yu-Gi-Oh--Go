@@ -24,14 +24,10 @@
         .top-card-img { width: 100px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
         .start-btn { padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; }
 
-        /* --- バトル画面：スマホサイズ最適化 ＆ 右端配置 --- */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
         .battle-stage { flex: 1; position: relative; padding: 20px 0; }
-        
         .m-row { position: absolute; width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; }
-        /* 敵：画面右端へマージンなしで固定 */
         .m-row.wild { top: 10dvh; justify-content: flex-end; padding-right: 0; flex-direction: row-reverse; }
-        /* 自分：左端配置 */
         .m-row.player { top: 40dvh; justify-content: flex-start; padding-left: 5%; flex-direction: row; }
 
         .battle-img-container { height: 100%; width: 45%; position: relative; display: flex; align-items: center; justify-content: center; }
@@ -41,13 +37,14 @@
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
 
-        /* --- 封印演出：相手カードとサイズ・縦横比を100%同期 --- */
+        /* --- 封印演出：縦向き修正 ＆ サイズ完全同期 --- */
         #seal-base-card { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg');
-            background-size: 100% 100%; background-position: center;
+            background-size: cover; background-position: center;
             border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; 
             box-shadow: 0 0 30px var(--fusion); pointer-events: none; 
+            /* 横向きにならないように背景の回転などはさせず、サイズをコンテナに合わせる */
         }
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; transform: translate(-50%, -50%); display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; box-shadow: 0 0 100px var(--fusion); }
@@ -60,7 +57,6 @@
         .btn-chance { animation: blink-btn 0.6s infinite alternate; border: 3px solid #ff8c00 !important; background: #fff !important; color: #ff8c00 !important; }
         @keyframes blink-btn { from { opacity: 1; transform: scale(1); } to { opacity: 0.7; transform: scale(1.05); } }
 
-        /* デッキ画面 */
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
@@ -73,7 +69,9 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.0.3</div>
+<div id="version-tag">Ver 1.0.4</div>
+
+<audio id="bgm" src="Overlap.mp3" loop></audio>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
@@ -103,7 +101,6 @@
                 <div id="w-hp-num" style="text-align:right; font-size:10px; margin-top:2px;">0/0</div>
             </div>
         </div>
-
         <div class="m-row player">
             <div class="battle-img-container">
                 <img id="p-img" class="battle-img" src="" style="border-color: var(--cyan);">
@@ -131,7 +128,7 @@
     <h3 style="text-align:center; color:var(--gold);">DUELIST DECK</h3>
     <div class="deck-header">
         <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px; font-weight:bold;"></div></div>
-        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold;">⚡ 強化</button></div>
+        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">⚡ 強化</button></div>
     </div>
     <div id="deck-grid" class="deck-grid"></div>
     <button onclick="closeDeck()" style="width:100%; padding:15px; background:#444; border:none; border-radius:8px; margin-top:10px; color:white; font-weight:bold;">閉じる</button>
@@ -144,7 +141,13 @@
 
     const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
 
-    function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); }
+    function startGame() { 
+        document.getElementById('top-screen').style.display = 'none'; 
+        document.getElementById('map').style.visibility = 'visible'; 
+        initMap(); 
+        // BGM開始
+        document.getElementById('bgm').play().catch(e => console.log("Audio play failed"));
+    }
 
     function initMap() {
         navigator.geolocation.getCurrentPosition(pos => {
@@ -177,14 +180,14 @@
 
     function updateUI() {
         if(!bData.e || !bData.p) return;
-        const updateBox = (p, d) => {
+        const setUI = (p, d) => {
             document.getElementById(`${p}-name-label`).innerText = d.name;
             document.getElementById(`${p}-stat-label`).innerText = `Lv.${d.level||d.lv} ATK:${d.atk}`;
             document.getElementById(`${p}-hp-fill`).style.width = (d.hp/d.max*100) + '%';
             document.getElementById(`${p}-hp-num`).innerText = `${Math.floor(d.hp)} / ${Math.floor(d.max)}`;
             document.getElementById(`${p}-img`).src = d.img;
         };
-        updateBox('w', bData.e); updateBox('p', bData.p);
+        setUI('w', bData.e); setUI('p', bData.p);
     }
 
     async function battleTurn(act) {
@@ -243,7 +246,6 @@
     function executeEnhance() {
         if(selectedIdx <= 0) return;
         myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.1);
-        myDeck[0].level = Math.floor(myDeck[0].atk / 1000) + 1;
         myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
         localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
     }
