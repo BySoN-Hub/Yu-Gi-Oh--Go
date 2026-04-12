@@ -3,45 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yu-Gi-Oh! GO - GPS Edition</title>
+    <title>Yu-Gi-Oh! GO - Hybrid Edition</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; }
         #map { width: 100vw; height: 100vh; }
-        
-        /* モンスターアイコンのスタイル */
         .monster-icon {
-            filter: drop-shadow(0 0 5px gold);
-            border: 1px solid gold;
+            filter: drop-shadow(0 0 8px gold);
+            border: 2px solid gold;
             border-radius: 4px;
+            background: rgba(0,0,0,0.5);
         }
-
-        /* 捕獲画面 */
         #capture-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); display: none;
+            background: rgba(0,0,0,0.95); display: none;
             flex-direction: column; align-items: center; justify-content: center; z-index: 2000;
             color: white; text-align: center;
         }
-        #monster-art { width: 250px; border: 3px solid gold; border-radius: 10px; margin-bottom: 20px; }
+        #monster-art { width: 260px; border: 3px solid gold; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,215,0,0.3); }
         #seal-button {
-            padding: 15px 30px; background: #c0392b; color: white;
-            border: none; border-radius: 50px; font-weight: bold; cursor: pointer;
+            padding: 15px 40px; background: linear-gradient(45deg, #c0392b, #e74c3c); color: white;
+            border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.2rem;
         }
         #status-bar {
-            position: fixed; top: 10px; width: 100%; text-align: center;
-            z-index: 1000; color: cyan; font-weight: bold; text-shadow: 0 0 5px #000;
+            position: fixed; top: 15px; width: 100%; text-align: center;
+            z-index: 1000; color: #00ffff; font-weight: bold; font-size: 1.1rem;
+            text-shadow: 0 0 10px #000; pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-<div id="status-bar">GPSスキャン中...</div>
+<div id="status-bar">デュエル・スキャナー：索敵中...</div>
 <div id="map"></div>
 
 <div id="capture-screen">
     <h2 id="m-name"></h2>
+    <p id="m-type" style="color: gold;"></p>
     <img id="monster-art" src="">
     <button id="seal-button" onclick="sealMonster()">カードへ封印</button>
 </div>
@@ -49,100 +48,98 @@
 <script>
     let map, userMarker;
     let currentMonster = null;
-    let monsterMarkers = [];
+    let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
 
-    // 固定モンスターリスト（APIが不安定な時のためのベース）
-    const monsterList = [
-        { name: "青眼の白龍", img: "https://images.ygoprodeck.com/images/cards/89631139.jpg" },
-        { name: "ブラック・マジシャン", img: "https://images.ygoprodeck.com/images/cards/46986414.jpg" },
-        { name: "真紅眼の黒竜", img: "https://images.ygoprodeck.com/images/cards/74677422.jpg" },
-        { name: "デーモンの召喚", img: "https://images.ygoprodeck.com/images/cards/70781052.jpg" }
+    // ベースとなるモンスターリスト
+    const baseList = [
+        { name: "青眼の白龍", img: "https://images.ygoprodeck.com/images/cards/89631139.jpg", type: "Dragon" },
+        { name: "ブラック・マジシャン", img: "https://images.ygoprodeck.com/images/cards/46986414.jpg", type: "Spellcaster" },
+        { name: "真紅眼の黒竜", img: "https://images.ygoprodeck.com/images/cards/74677422.jpg", type: "Dragon" }
     ];
 
-    // 1. 地図の初期化
     function initMap(lat, lon) {
-        map = L.map('map').setView([lat, lon], 16);
-        
-        // ダークモードの地図タイル
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap'
+        map = L.map('map', { zoomControl: false }).setView([lat, lon], 17);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        userMarker = L.circleMarker([lat, lon], {
+            color: '#00ffff', radius: 8, fillOpacity: 1, weight: 3
         }).addTo(map);
 
-        // プレイヤーの位置
-        userMarker = L.circleMarker([lat, lon], {
-            color: 'cyan', radius: 10, fillOpacity: 0.8
-        }).addTo(map).bindPopup("現在地（デュエリスト）");
-
-        // 周辺にモンスターを配置
-        spawnMonstersNearby(lat, lon);
+        // APIから新しいモンスターを読み込んで配置
+        loadAndSpawnMonsters(lat, lon);
     }
 
-    // 2. モンスターを周辺に配置
-    function spawnMonstersNearby(lat, lon) {
-        document.getElementById('status-bar').innerText = "周辺に高エネルギー反応アリ！";
+    async function loadAndSpawnMonsters(lat, lon) {
+        document.getElementById('status-bar').innerText = "通信中：未知の信号を受信...";
         
-        for(let i=0; i < 5; i++) {
-            const monster = monsterList[Math.floor(Math.random() * monsterList.length)];
-            
-            // 現在地の近く（ランダムなオフセット）
-            const mLat = lat + (Math.random() - 0.5) * 0.005;
-            const mLon = lon + (Math.random() - 0.5) * 0.005;
+        for(let i=0; i < 6; i++) {
+            let monster;
+            try {
+                // APIからランダム取得（プロキシ経由でCORS回避を試行）
+                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://db.ygoprodeck.com/api/v7/randomcard.php')}`);
+                const data = await res.json();
+                
+                if (data.card_images && !data.type.includes("Spell") && !data.type.includes("Trap")) {
+                    monster = { 
+                        name: data.name, 
+                        img: data.card_images[0].image_url, 
+                        type: data.race 
+                    };
+                } else {
+                    throw new Error("Not a monster");
+                }
+            } catch (e) {
+                // APIがダメならリストから選ぶ
+                monster = baseList[Math.floor(Math.random() * baseList.length)];
+            }
 
-            const icon = L.icon({
-                iconUrl: monster.img,
-                iconSize: [50, 72],
-                className: 'monster-icon'
-            });
-
-            const marker = L.marker([mLat, mLon], { icon: icon }).addTo(map);
-            
-            // タップ（クリック）で捕獲画面へ
-            marker.on('click', () => {
-                openCapture(monster, marker);
-            });
-
-            monsterMarkers.push(marker);
+            spawnOnMap(monster, lat, lon);
         }
+        document.getElementById('status-bar').innerText = "スキャン完了：モンスターを確認！";
     }
 
-    // 3. 捕獲画面を開く
+    function spawnOnMap(monster, lat, lon) {
+        const mLat = lat + (Math.random() - 0.5) * 0.003;
+        const mLon = lon + (Math.random() - 0.5) * 0.003;
+
+        const icon = L.icon({
+            iconUrl: monster.img,
+            iconSize: [60, 87],
+            className: 'monster-icon'
+        });
+
+        const marker = L.marker([mLat, mLon], { icon: icon }).addTo(map);
+        marker.on('click', () => openCapture(monster, marker));
+    }
+
     function openCapture(monster, marker) {
         currentMonster = { monster, marker };
         document.getElementById('m-name').innerText = monster.name;
+        document.getElementById('m-type').innerText = `[ ${monster.type} ]`;
         document.getElementById('monster-art').src = monster.img;
         document.getElementById('capture-screen').style.display = 'flex';
     }
 
-    // 4. 封印（ゲット）処理
     function sealMonster() {
-        alert(`${currentMonster.monster.name} を封印した！`);
-        
-        // 地図から消す
-        map.removeLayer(currentMonster.marker);
-        document.getElementById('capture-screen').style.display = 'none';
+        const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-37a.mp3'); // 簡易SE
+        audio.play().catch(()=>{});
 
-        // LocalStorageに保存（育成機能の準備）
-        let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
-        deck.push({ ...currentMonster.monster, level: 1 });
+        alert(`【封印成功】\n${currentMonster.monster.name} をカードに収めた！`);
+        
+        map.removeLayer(currentMonster.marker);
+        deck.push({ ...currentMonster.monster, caughtAt: new Date() });
         localStorage.setItem('myDeck', JSON.stringify(deck));
+        
+        document.getElementById('capture-screen').style.display = 'none';
     }
 
-    // GPS取得
+    // 起動処理
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                initMap(pos.coords.latitude, pos.coords.longitude);
-            },
-            (err) => {
-                alert("GPSが取得できませんでした。東京駅付近を表示します。");
-                initMap(35.6812, 139.7671);
-            }
+            pos => initMap(pos.coords.latitude, pos.coords.longitude),
+            () => initMap(35.6586, 139.7454) // 失敗時は東京タワー
         );
-    } else {
-        alert("お使いのブラウザはGPS非対応です。");
-        initMap(35.6812, 139.7671);
     }
 </script>
-
 </body>
 </html>
