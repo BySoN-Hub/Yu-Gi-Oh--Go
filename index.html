@@ -8,137 +8,122 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --bg: #050510; }
-        
-        /* 基本スタイル：スマホの全画面に固定 */
-        body { 
-            margin: 0; padding: 0; background: #000; 
-            font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; 
-            overflow: hidden; height: 100vh; width: 100vw; color: white; 
-        }
+        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; color: white; }
 
-        /* --- マップ上の青い帯対策 --- */
-        #map { width: 100%; height: 100%; position: absolute; z-index: 1; outline: none; }
-        .leaflet-container { background: #000 !important; }
-        .leaflet-vml-container { display: none; } /* 古い描画要素を消去 */
+        /* --- マップ上の帯・ノイズ対策 --- */
+        #map { width: 100%; height: 100%; position: absolute; z-index: 1; background: #000; outline: none; }
+        .leaflet-marker-shadow { display: none !important; } /* 影を消す */
+        .leaflet-pane img[src*="marker-icon"] { display: none !important; } /* 標準のピンを消す */
+        .leaflet-marker-icon { border: none !important; background: none !important; }
+        .monster-icon { filter: drop-shadow(0 0 5px var(--gold)); border-radius: 4px; }
 
-        /* UIボタン（押しやすいサイズ） */
-        .ui-btn { 
-            position: fixed; width: 65px; height: 65px; 
-            background: rgba(0,0,0,0.85); border: 2px solid var(--gold); 
-            border-radius: 50%; color: var(--gold); font-weight: bold; 
-            z-index: 1000; display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 0 15px var(--gold); pointer-events: auto;
-        }
-        #deck-btn { bottom: 30px; left: 20px; }
-        #gps-btn { bottom: 30px; right: 20px; font-size: 24px; }
-
-        /* --- デッキ画面：階層レイアウト --- */
+        /* --- デッキ画面：最前面に表示 --- */
         #deck-screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: var(--bg); display: none; flex-direction: column; 
-            z-index: 4000; padding: 15px; box-sizing: border-box; 
+            z-index: 99999 !important; padding: 20px; box-sizing: border-box; 
         }
-        .deck-title { text-align: center; color: var(--gold); margin: 0 0 10px 0; font-size: 1.2rem; }
-        
-        /* 上段：メインエリア */
         .main-mon-area { 
             display: flex; align-items: center; justify-content: space-around; 
-            background: rgba(255,255,255,0.08); padding: 12px; border-radius: 12px; 
-            border: 2px solid var(--cyan); margin-bottom: 15px; flex-shrink: 0;
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; 
+            border: 2px solid var(--cyan); margin-bottom: 15px; 
         }
-        .main-card-big { width: 120px; border: 2px solid var(--gold); border-radius: 4px; box-shadow: 0 0 15px var(--cyan); }
-        .main-actions { display: flex; flex-direction: column; gap: 10px; }
-        .action-btn { 
-            padding: 10px 15px; background: #222; border: 1px solid var(--gold); 
-            color: var(--gold); border-radius: 5px; font-weight: bold; font-size: 13px;
-        }
-
-        /* 下段：控えグリッド */
-        .sub-mon-title { font-size: 13px; color: #aaa; margin-bottom: 5px; }
-        .sub-grid { 
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; 
-            overflow-y: auto; flex-grow: 1; padding-bottom: 10px;
-        }
-        .card-box { 
-            border: 1px solid #444; padding: 4px; border-radius: 4px; 
-            text-align: center; background: #111; position: relative;
-        }
+        .main-card-big { width: 130px; border: 2px solid var(--gold); border-radius: 5px; box-shadow: 0 0 15px var(--cyan); }
+        .sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 20px; }
+        .card-box { border: 1px solid #444; padding: 5px; text-align: center; position: relative; background: #111; }
         .card-box.selected { border: 2px solid var(--gold); background: rgba(255,215,0,0.1); }
-        .card-box img { width: 100%; display: block; }
-        .stock-badge { 
-            position: absolute; top: -5px; right: -5px; background: var(--red); 
-            padding: 1px 5px; border-radius: 10px; font-size: 10px; font-weight: bold; border: 1px solid #fff;
-        }
+        .card-box img { width: 100%; border-radius: 2px; }
+        .stock-badge { position: absolute; top: -5px; right: -5px; background: var(--red); padding: 1px 6px; border-radius: 10px; font-size: 11px; font-weight: bold; border: 1px solid #fff; }
 
-        /* バトル画面等の共通 */
-        #battle-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#000; display:none; z-index: 2000; }
-        .close-deck { padding: 15px; background: #333; color: white; border: none; border-radius: 8px; font-weight: bold; flex-shrink: 0; }
+        /* UIボタン */
+        .ui-btn { position: fixed; width: 65px; height: 65px; background: rgba(0,0,0,0.8); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); font-weight: bold; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--gold); }
+        #deck-btn-ui { bottom: 30px; left: 20px; }
+        #gps-btn-ui { bottom: 30px; right: 20px; font-size: 24px; }
+
+        /* 共通ボタン */
+        .action-btn { background: #222; border: 1px solid var(--gold); color: var(--gold); padding: 10px; border-radius: 5px; font-weight: bold; margin: 5px 0; }
+        .close-btn { width: 100%; padding: 15px; background: #333; color: white; border: none; border-radius: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="map"></div>
-<div id="deck-btn" class="ui-btn" onclick="openDeck()">DECK</div>
-<div id="gps-btn" class="ui-btn" onclick="refreshGPS()">🛰️</div>
+<div id="deck-btn-ui" class="ui-btn" onclick="openDeck()">DECK</div>
+<div id="gps-btn-ui" class="ui-btn" onclick="refreshGPS()">🛰️</div>
 
 <div id="deck-screen">
-    <h3 class="deck-title">DUELIST DECK</h3>
+    <h3 style="text-align:center; color:var(--gold); margin: 0 0 15px 0;">DUELIST DECK</h3>
     
     <div class="main-mon-area">
         <div style="text-align:center;">
-            <div style="font-size:10px; color:var(--cyan); margin-bottom:4px;">[ 戦闘中 ]</div>
+            <div style="font-size:11px; color:var(--cyan); margin-bottom:5px;">[ 戦闘モンスター ]</div>
             <img id="main-mon-img" class="main-card-big" src="">
-            <div id="main-mon-info" style="font-size:11px; margin-top:4px;"></div>
+            <div id="main-mon-name" style="font-size:12px; margin-top:5px; font-weight:bold;"></div>
         </div>
-        <div class="main-actions">
+        <div style="display:flex; flex-direction:column;">
             <button class="action-btn" onclick="executeSwap()">🔄 交代</button>
             <button class="action-btn" onclick="executeEnhance()">⚡ 強化</button>
         </div>
     </div>
 
-    <div class="sub-mon-title">控えモンスター</div>
+    <div style="font-size:13px; color:#aaa; margin-bottom:10px;">控えモンスター</div>
     <div id="deck-grid" class="sub-grid"></div>
 
-    <button class="close-deck" onclick="closeDeck()">マップに戻る</button>
-</div>
-
-<div id="battle-screen">
-    <div style="height:100%; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-        <p>バトル読み込み中...</p>
-        <button onclick="location.reload()" style="padding:20px; background:var(--red); color:#fff; border:none; border-radius:10px;">エラー復旧</button>
-    </div>
+    <button class="close-btn" onclick="closeDeck()" style="margin-top:15px;">マップに戻る</button>
 </div>
 
 <script>
-    let map, bData = { p: null, e: null, busy: false };
+    let map, userPos = {lat: 35.6812, lon: 139.7671};
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"クリボー","img":"https://images.ygoprodeck.com/images/cards/40640057.jpg","atk":300,"level":1,"uid":1,"count":1}]');
     let selectedSubIdx = -1;
 
-    // マップ初期化
+    // --- 地図初期化 ---
     function init() {
         navigator.geolocation.getCurrentPosition(pos => {
-            const {latitude, longitude} = pos.coords;
-            map = L.map('map', {zoomControl:false, attributionControl:false}).setView([latitude, longitude], 17);
+            userPos = {lat: pos.coords.latitude, lon: pos.coords.longitude};
+            map = L.map('map', {zoomControl:false, attributionControl:false}).setView([userPos.lat, userPos.lon], 17);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            // マップサイズ再計算
-            setTimeout(() => map.invalidateSize(), 500);
-            spawn(latitude, longitude);
+            spawn(userPos.lat, userPos.lon);
+        }, () => {
+            map = L.map('map', {zoomControl:false}).setView([userPos.lat, userPos.lon], 17);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            spawn(userPos.lat, userPos.lon);
         });
     }
 
     function refreshGPS() {
         navigator.geolocation.getCurrentPosition(pos => {
-            map.setView([pos.coords.latitude, pos.coords.longitude]);
-            spawn(pos.coords.latitude, pos.coords.longitude);
+            userPos = {lat: pos.coords.latitude, lon: pos.coords.longitude};
+            map.setView([userPos.lat, userPos.lon]);
+            spawn(userPos.lat, userPos.lon);
         });
     }
 
     function spawn(lat, lon) {
+        // 全ての既存マーカーをクリーンに削除
         map.eachLayer(layer => { if(layer instanceof L.Marker) map.removeLayer(layer); });
-        // モンスター召喚ロジック（省略。既存のpoolを利用）
+        
+        const pool = [
+            {name:"青眼の白龍", id:89631139, atk:3000},
+            {name:"ブラック・マジシャン", id:46986414, atk:2500},
+            {name:"真紅眼の黒竜", id:74677422, atk:2400}
+        ];
+
+        for(let i=0; i<15; i++) {
+            let m = pool[Math.floor(Math.random()*pool.length)];
+            // アイコンのみを表示（影や標準ピンを完全排除）
+            let marker = L.marker([lat+(Math.random()-0.5)*0.008, lon+(Math.random()-0.5)*0.008], {
+                icon: L.icon({
+                    iconUrl: `https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg`,
+                    iconSize: [45, 65],
+                    iconAnchor: [22, 32],
+                    shadowUrl: null // 影を明示的に無効化
+                })
+            }).addTo(map);
+        }
     }
 
-    // デッキ画面表示（修復）
+    // --- デッキ画面ロジック ---
     function openDeck() {
         document.getElementById('deck-screen').style.display = 'flex';
         renderDeck();
@@ -147,46 +132,40 @@
     function renderDeck() {
         const main = myDeck[0];
         document.getElementById('main-mon-img').src = main.img;
-        document.getElementById('main-mon-info').innerText = `${main.name}\nATK:${main.atk} (Lv.${main.level || 1})`;
+        document.getElementById('main-mon-name').innerText = `${main.name} (ATK:${main.atk})`;
         
         const grid = document.getElementById('deck-grid');
         grid.innerHTML = '';
         myDeck.forEach((m, i) => {
-            if(i === 0) return; // 先頭は控えに表示しない
-            const isSelected = (selectedSubIdx === i);
+            if(i === 0) return;
+            const isSel = (selectedSubIdx === i);
             grid.innerHTML += `
-                <div class="card-box ${isSelected ? 'selected' : ''}" onclick="selectSub(${i})">
+                <div class="card-box ${isSel?'selected':''}" onclick="selectedSubIdx=${i};renderDeck();">
                     ${m.count > 1 ? `<div class="stock-badge">×${m.count}</div>` : ''}
                     <img src="${m.img}">
-                    <div style="font-size:9px; margin-top:2px;">ATK:${m.atk}</div>
+                    <div style="font-size:9px; margin-top:3px;">ATK:${m.atk}</div>
                 </div>`;
         });
-    }
-
-    function selectSub(i) {
-        selectedSubIdx = i;
-        renderDeck();
     }
 
     function executeSwap() {
         if(selectedSubIdx === -1) return alert("控えを選んでください");
         const [target] = myDeck.splice(selectedSubIdx, 1);
         myDeck.unshift(target);
-        saveAndReload();
+        save();
     }
 
     function executeEnhance() {
         if(selectedSubIdx === -1) return alert("生贄を選んでください");
         const material = myDeck[selectedSubIdx];
         myDeck[0].atk += Math.floor(material.atk * 0.05);
-        myDeck[0].level = (myDeck[0].level || 1) + 1;
         material.count--;
         if(material.count <= 0) myDeck.splice(selectedSubIdx, 1);
-        saveAndReload();
+        save();
         alert("強化成功！");
     }
 
-    function saveAndReload() {
+    function save() {
         localStorage.setItem('myDeck', JSON.stringify(myDeck));
         selectedSubIdx = -1;
         renderDeck();
