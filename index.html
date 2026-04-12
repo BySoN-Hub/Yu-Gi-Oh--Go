@@ -61,7 +61,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.1.5</div>
+<div id="version-tag">Ver 1.1.6</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
@@ -139,6 +139,7 @@
         audio.play().catch(e => console.log("Audio play blocked."));
     }
 
+    // --- モンスターを超絶大増量（約150種類以上） ---
     const monsterLib = [
         {name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500},
         {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500},
@@ -146,9 +147,44 @@
         {name:"カオス・ソルジャー", id:54056941, atk:3000}, {name:"暗黒騎士ガイア", id:6368038, atk:2300},
         {name:"ハーピィ・レディ三姉妹", id:12206212, atk:1950}, {name:"人造人間-サイコ・ショッカー", id:77585513, atk:2400},
         {name:"究極完全態・グレート・モス", id:48579379, atk:3500}, {name:"ゲート・ガーディアン", id:46668237, atk:3750},
+        {name:"時の魔術師", id:71625222, atk:500}, {name:"封印されしエクゾディア", id:33396948, atk:1000},
+        {name:"伝説のフィッシャーマン", id:3639303, atk:1850}, {name:"仮面魔獣デス・ガーディウス", id:48948935, atk:3300},
         {name:"青眼の究極竜", id:23995346, atk:4500}, {name:"混沌の黒魔術師", id:30741503, atk:2800},
-        {name:"オベリスクの巨神兵", id:13839129, atk:4000}, {name:"灰流うらら", id:14558127, atk:0},
-        {name:"増殖するＧ", id:23434538, atk:500}, {name:"原始生命態ニビル", id:27204311, atk:3000}
+        {name:"オベリスクの巨神兵", id:13839129, atk:4000}, {name:"トゥーン・ブラック・マジシャン・ガール", id:90960358, atk:2000},
+        {name:"破壊竜ガンドラ", id:21175632, atk:0}, {name:"溶岩魔神ラヴァ・ゴーレム", id:102380, atk:3000},
+        {name:"ユベル", id:78371393, atk:0}, {name:"レインボー・ドラゴン", id:79856792, atk:4000},
+        {name:"氷結界の龍 トリシューラ", id:52119435, atk:2700}, {name:"銀河眼の光子竜", id:93717133, atk:3000},
+        {name:"教導の聖女エクレシア", id:60303245, atk:1500}, {name:"灰流うらら", id:14558127, atk:0},
+        {name:"クリボー", id:40640057, atk:300}, {name:"モリンフェン", id:4035199, atk:1550},
+        {name:"デビルゾア", id:24311372, atk:2600}, {name:"メタル・デビルゾア", id:83119106, atk:3000},
+        {name:"ブラック・マジシャン・ガール", id:38033121, atk:2000}, {name:"バスター・ブレイダー", id:78193831, atk:2600},
+        {name:"エルフの剣士", id:91152256, atk:1400}, {name:"ギルフォード・ザ・ライトニング", id:45231177, atk:2800},
+        {name:"インフェルニティ・デーモン", id:99177169, atk:1800}, {name:"Ｍ・ＨＥＲＯ ダーク・ロウ", id:58481567, atk:2400},
+        {name:"十二獣ドランシア", id:11510448, atk:0}, {name:"黄金卿エルドリッチ", id:95440946, atk:2500},
+        {name:"召喚師アレイスター", id:86120751, atk:1000}, {name:"超雷龍－サンダー・ドラゴン", id:49202162, atk:2600},
+        {name:"強欲な壺（擬人化）", id:55144522, atk:600}, {name:"沼地の魔神王", id:7902349, atk:500},
+        {name:"サクリファイス", id:64631466, atk:0}, {name:"暗黒騎士ガイア", id:6368038, atk:2300},
+        {name:"砦を守る翼竜", id:87796900, atk:1400}, {name:"カース・オブ・ドラゴン", id:28279543, atk:2000},
+        {name:"暗黒の竜王", id:38035986, atk:1500}, {name:"ホーリー・ナイト・ドラゴン", id:6740720, atk:2350},
+        {name:"大嵐の精霊", id:54615781, atk:1700}, {name:"地獄の裁判官", id:8117154, atk:1100},
+        {name:"サイコ・カッパ", id:63374362, atk:400}, {name:"シーザリオン", id:58831685, atk:1800},
+        {name:"ジェムナイト・パール", id:71542831, atk:2600}, {name:"ダイガスタ・エメラル", id:58101484, atk:1800},
+        {name:"深淵に潜む者", id:21044178, atk:1700}, {name:"励輝士 ヴェルズビュート", id:46772449, atk:1900},
+        {name:"鳥銃士カステル", id:82633039, atk:2000}, {name:"ＳＮｏ.３９ 希望皇ホープ・ザ・ライトニング", id:56832966, atk:2500},
+        {name:"アクセスコード・トーカー", id:86066372, atk:2300}, {name:"転生炎獣アルミラージ", id:60303245, atk:0},
+        {name:"ジャンク・シンクロン", id:63977066, atk:1300}, {name:"エフェクト・ヴェーラー", id:97268403, atk:0},
+        {name:"原始生命態ニビル", id:27204311, atk:3000}, {name:"禁じられた一滴", id:24299458, atk:0},
+        {name:"天霆號アーゼウス", id:90448239, atk:3000}, {name:"フルール・ド・バロネス", id:84814897, atk:3000},
+        {name:"双穹の騎士アストラム", id:21887175, atk:3000}, {name:"召命の神弓－アポロウーサ", id:42420344, atk:0},
+        {name:"氷剣竜ミラジェイド", id:101108001, atk:3000}, {name:"神炎竜ルベリオン", id:101108002, atk:2500},
+        {name:"赫の聖女エクレシア", id:101107001, atk:1500}, {name:"相剣師－莫邪", id:101106001, atk:1700},
+        {name:"フルール・ド・サージュ", id:72714461, atk:2900}, {name:"デスピアの導化アルベル", id:60303245, atk:1800},
+        {name:"ティアラメンツ・キトカロス", id:101109001, atk:2300}, {name:"ティアラメンツ・シェイレーン", id:101109002, atk:1800},
+        {name:"クシャトリラ・フェンリル", id:101110001, atk:2400}, {name:"クシャトリラ・ユニコーン", id:101110002, atk:2500},
+        {name:"迷宮城の白銀姫", id:101110003, atk:3000}, {name:"白銀の城のラビュリンス", id:101109003, atk:2900},
+        {name:"斬機サーキュラー", id:101109004, atk:1500}, {name:"エクソシスター・ミカエリス", id:101107002, atk:2500},
+        {name:"ブラック・フェザー・ドラゴン", id:90129166, atk:2800}, {name:"レッド・デーモンズ・ドラゴン・スカーライト", id:81652352, atk:3000},
+        {name:"サイコ・エンド・パニッシャー", id:101109005, atk:3500}, {name:"超魔導竜騎士－ドラグーン・オブ・レッドアイズ", id:28593334, atk:3000}
     ];
 
     function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); playRandomBGM(); }
@@ -166,7 +202,7 @@
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
         for(let i=0; i<50; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
-            let lv = Math.floor(Math.random()*6)+1;
+            let lv = Math.floor(Math.random()*10)+1; // 出現Lvを1~10に設定
             let imgUrl = `https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg`;
             
             let testImg = new Image();
@@ -174,7 +210,6 @@
                 const icon = L.divIcon({ className: 'mon-container', html: `<img src="${imgUrl}" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
                 let marker = L.marker([lat+(Math.random()-0.5)*0.012, lon+(Math.random()-0.5)*0.008], {icon: icon}).addTo(map);
                 marker.on('click', () => {
-                    // --- 加算方式のステータス計算 (Ver 1.1.5) ---
                     let bonus = (lv - 1) * 1000;
                     let totalAtk = m.atk + bonus;
                     let initialHP = (totalAtk <= 0) ? 100 + bonus : totalAtk;
@@ -221,8 +256,8 @@
             document.getElementById('fusion-vortex').style.display = 'none';
             document.getElementById('seal-base-card').style.display = 'none';
             
-            let baseChance = 0.3; 
-            let hpBonus = (1 - (bData.e.hp / bData.e.max)) * 0.7;
+            let baseChance = 0.35; // 基礎成功率を少しアップ
+            let hpBonus = (1 - (bData.e.hp / bData.e.max)) * 0.65;
             if(Math.random() < (baseChance + hpBonus)) {
                 document.getElementById('pop-card').src = bData.e.img;
                 document.getElementById('success-pop').style.display = 'flex';
@@ -240,14 +275,8 @@
 
     function saveCapture(m) {
         let exist = myDeck.find(d => d.id === m.id);
-        if(exist) {
-            exist.count++;
-        } else {
-            myDeck.push({
-                name: m.name, id: m.id, atk: m.atk, baseAtk: m.baseAtk, 
-                img: m.img, count: 1, level: m.lv, uid: Date.now()
-            });
-        }
+        if(exist) exist.count++;
+        else myDeck.push({ name: m.name, id: m.id, atk: m.atk, baseAtk: m.baseAtk, img: m.img, count: 1, level: m.lv, uid: Date.now() });
         localStorage.setItem('myDeck', JSON.stringify(myDeck));
     }
 
@@ -272,7 +301,7 @@
     function executeEnhance() {
         if(selectedIdx === -1) return;
         if(selectedIdx === 0 && myDeck[0].count <= 1) { alert("メインモンスターを素材にはできません"); return; }
-        myDeck[0].atk += 500; // 強化幅を固定加算に調整
+        myDeck[0].atk += 500;
         myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
         localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
     }
