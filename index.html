@@ -11,7 +11,7 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100dvh; width: 100vw; color: white; touch-action: manipulation; }
         #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); font-size: 10px; color: var(--gold); z-index: 2000000; padding: 2px 5px; border-radius: 3px; pointer-events: none; border: 1px solid rgba(255,215,0,0.3); }
 
-        /* マップ・基本UI */
+        /* マップ・UIボタン */
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; }
         .mon-chip { border: 2px solid var(--gold); border-radius: 4px; object-fit: cover; background: #000; }
         .lv-badge { position: absolute; top: -5px; right: -5px; background: #000; color: var(--gold); border: 1px solid var(--gold); font-size: 10px; padding: 1px 3px; border-radius: 3px; font-weight: bold; z-index: 10; }
@@ -31,35 +31,29 @@
         .battle-stage { flex: 1; position: relative; padding: 20px 0; display: flex; flex-direction: column; }
         
         .m-row { width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; position: relative; }
-        .m-row.wild { margin-top: 10dvh; justify-content: flex-end; padding-right: 5%; flex-direction: row-reverse; }
+        /* 相手：右端へ移動 */
+        .m-row.wild { margin-top: 10dvh; justify-content: flex-end; padding-right: 0%; flex-direction: row-reverse; }
+        /* 自分：左端配置 */
         .m-row.player { margin-top: 5dvh; justify-content: flex-start; padding-left: 5%; flex-direction: row; }
 
-        .battle-img-container { height: 100%; width: 40%; position: relative; display: flex; align-items: center; justify-content: center; }
+        .battle-img-container { height: 100%; width: 45%; position: relative; display: flex; align-items: center; justify-content: center; }
         .battle-img { height: 100%; width: auto; max-width: 100%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; transition: transform 1s, opacity 1s; }
         
         .status-ui { width: 130px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; margin: 0 10px; }
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
 
-        /* --- 封印エフェクト：手前外側から収束 --- */
-        #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #3c2415; border: 3px solid var(--gold); border-radius: 5px; display: none; z-index: 100; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
-        
-        #fusion-vortex { 
-            position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; 
-            transform: translate(-50%, -50%); display: none; z-index: 9500; /* Z軸を手前へ */
-            align-items: center; justify-content: center; pointer-events: none; 
+        /* --- 封印エフェクト：本家カード裏面デザイン ＆ 小さめに調整 --- */
+        #seal-base-card { 
+            position: absolute; top: 7.5%; left: 7.5%; width: 85%; height: 85%; 
+            background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg');
+            background-size: cover; background-position: center;
+            border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; 
+            box-shadow: 0 0 30px var(--fusion); pointer-events: none; 
         }
-        .vortex-anim { 
-            width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; 
-            animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; 
-            box-shadow: 0 0 100px var(--fusion), inset 0 0 50px var(--fusion);
-        }
-        /* 外側（手前）から一気にカードへ吸い込まれる動き */
-        @keyframes spin-converge { 
-            0% { transform: scale(4) rotate(0deg); opacity: 0; filter: blur(10px); } 
-            20% { opacity: 0.8; filter: blur(2px); }
-            100% { transform: scale(0) rotate(1080deg); opacity: 0; filter: blur(0px); } 
-        }
+        #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; transform: translate(-50%, -50%); display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
+        .vortex-anim { width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; box-shadow: 0 0 100px var(--fusion); }
+        @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
         .sucking { transform: scale(0) rotate(360deg) !important; opacity: 0 !important; }
 
         #msg-window { height: 50px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; text-align: center; z-index: 9100; }
@@ -74,14 +68,13 @@
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
         .card-box { border: 1px solid #444; padding: 5px; background: #111; text-align: center; position: relative; }
         .card-box img { width: 100%; }
-        .selected { border: 2px solid var(--gold) !important; background: rgba(255,215,0,0.1) !important; }
         .stock-badge { position: absolute; bottom: 2px; right: 2px; background: var(--red); color: white; font-size: 10px; padding: 1px 4px; border-radius: 10px; font-weight: bold; z-index: 5; }
         #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
     </style>
 </head>
 <body>
 
-<div id="version-tag">Ver 1.0.1</div>
+<div id="version-tag">Ver 1.0.2</div>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
@@ -139,7 +132,7 @@
     <h3 style="text-align:center; color:var(--gold);">DUELIST DECK</h3>
     <div class="deck-header">
         <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px; font-weight:bold;"></div></div>
-        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">⚡ 強化</button></div>
+        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:10px; border-radius:5px; font-weight:bold; color:#000;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:10px; border-radius:5px; font-weight:bold; color:#000;">⚡ 強化</button></div>
     </div>
     <div id="deck-grid" class="deck-grid"></div>
     <button onclick="closeDeck()" style="width:100%; padding:15px; background:#444; border:none; border-radius:8px; margin-top:10px; color:white; font-weight:bold;">閉じる</button>
@@ -185,16 +178,14 @@
 
     function updateUI() {
         if(!bData.e || !bData.p) return;
-        document.getElementById('w-name-label').innerText = bData.e.name;
-        document.getElementById('w-stat-label').innerText = `Lv.${bData.e.lv} ATK:${bData.e.atk}`;
-        document.getElementById('w-hp-fill').style.width = (bData.e.hp/bData.e.max*100) + '%';
-        document.getElementById('w-hp-num').innerText = `${Math.floor(bData.e.hp)} / ${Math.floor(bData.e.max)}`;
-        document.getElementById('w-img').src = bData.e.img;
-        document.getElementById('p-name-label').innerText = bData.p.name;
-        document.getElementById('p-stat-label').innerText = `Lv.${Math.floor(bData.p.atk / 1000) + 1} ATK:${bData.p.atk}`;
-        document.getElementById('p-hp-fill').style.width = (bData.p.hp/bData.p.max*100) + '%';
-        document.getElementById('p-hp-num').innerText = `${Math.floor(bData.p.hp)} / ${Math.floor(bData.p.max)}`;
-        document.getElementById('p-img').src = bData.p.img;
+        const updateBox = (p, d) => {
+            document.getElementById(`${p}-name-label`).innerText = d.name;
+            document.getElementById(`${p}-stat-label`).innerText = `Lv.${d.level||d.lv} ATK:${d.atk}`;
+            document.getElementById(`${p}-hp-fill`).style.width = (d.hp/d.max*100) + '%';
+            document.getElementById(`${p}-hp-num`).innerText = `${Math.floor(d.hp)} / ${Math.floor(d.max)}`;
+            document.getElementById(`${p}-img`).src = d.img;
+        };
+        updateBox('w', bData.e); updateBox('p', bData.p);
     }
 
     async function battleTurn(act) {
@@ -253,6 +244,7 @@
     function executeEnhance() {
         if(selectedIdx <= 0) return;
         myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.1);
+        myDeck[0].level = Math.floor(myDeck[0].atk / 1000) + 1;
         myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
         localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
     }
