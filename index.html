@@ -3,110 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yu-Gi-Oh! GO</title>
+    <title>Yu-Gi-Oh! GO - GPS Edition</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #000; color: white; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; }
+        #map { width: 100vw; height: 100vh; }
         
-        /* 地面を感じさせるサイバーマップ */
-        #map-container { 
-            width: 100vw; height: 100vh; 
-            background: radial-gradient(circle at 50% 50%, #0d1b2a 0%, #000 100%);
-            background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.15) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(0, 255, 255, 0.15) 2px, transparent 2px);
-            background-size: 80px 80px;
-            position: relative; 
-        }
-
+        /* モンスターアイコンのスタイル */
         .monster-icon {
-            position: absolute; width: 100px; height: 145px;
-            cursor: pointer; border: 2px solid #ffd700; border-radius: 5px;
-            background: #111; z-index: 100;
-            box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
-            transition: transform 0.2s;
-        }
-        .monster-icon:active { transform: scale(0.9); }
-
-        #status-msg { 
-            position: absolute; top: 20px; width: 100%; text-align: center;
-            color: #00ffff; font-weight: bold; font-size: 1.2rem;
-            text-shadow: 0 0 10px #000; z-index: 500;
+            filter: drop-shadow(0 0 5px gold);
+            border: 1px solid gold;
+            border-radius: 4px;
         }
 
+        /* 捕獲画面 */
         #capture-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none;
+            background: rgba(0,0,0,0.9); display: none;
             flex-direction: column; align-items: center; justify-content: center; z-index: 2000;
+            color: white; text-align: center;
         }
-
-        #monster-art { width: 260px; border: 4px solid #ffd700; border-radius: 12px; margin-bottom: 20px; }
-        
-        button {
-            padding: 15px 35px; font-size: 1.2rem; background: #c0392b; color: white;
-            border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+        #monster-art { width: 250px; border: 3px solid gold; border-radius: 10px; margin-bottom: 20px; }
+        #seal-button {
+            padding: 15px 30px; background: #c0392b; color: white;
+            border: none; border-radius: 50px; font-weight: bold; cursor: pointer;
+        }
+        #status-bar {
+            position: fixed; top: 10px; width: 100%; text-align: center;
+            z-index: 1000; color: cyan; font-weight: bold; text-shadow: 0 0 5px #000;
         }
     </style>
 </head>
 <body>
 
-<div id="status-msg">エリア内に高エネルギー反応アリ！</div>
-<div id="map-container"></div>
+<div id="status-bar">GPSスキャン中...</div>
+<div id="map"></div>
 
 <div id="capture-screen">
     <h2 id="m-name"></h2>
     <img id="monster-art" src="">
-    <button onclick="captureMonster()">カードへ封印する</button>
+    <button id="seal-button" onclick="sealMonster()">カードへ封印</button>
 </div>
 
 <script>
-    const map = document.getElementById('map-container');
-    const statusMsg = document.getElementById('status-msg');
+    let map, userMarker;
     let currentMonster = null;
+    let monsterMarkers = [];
 
-    // 確実に表示されるモンスターリスト（画像URLを直書き）
+    // 固定モンスターリスト（APIが不安定な時のためのベース）
     const monsterList = [
         { name: "青眼の白龍", img: "https://images.ygoprodeck.com/images/cards/89631139.jpg" },
         { name: "ブラック・マジシャン", img: "https://images.ygoprodeck.com/images/cards/46986414.jpg" },
         { name: "真紅眼の黒竜", img: "https://images.ygoprodeck.com/images/cards/74677422.jpg" },
-        { name: "封印されしエクゾディア", img: "https://images.ygoprodeck.com/images/cards/33396948.jpg" },
-        { name: "暗黒騎士ガイア", img: "https://images.ygoprodeck.com/images/cards/6382542.jpg" },
         { name: "デーモンの召喚", img: "https://images.ygoprodeck.com/images/cards/70781052.jpg" }
     ];
 
-    function spawnMonsters() {
-        // リストからランダムに3体選んで表示
-        for(let i=0; i<3; i++) {
+    // 1. 地図の初期化
+    function initMap(lat, lon) {
+        map = L.map('map').setView([lat, lon], 16);
+        
+        // ダークモードの地図タイル
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+
+        // プレイヤーの位置
+        userMarker = L.circleMarker([lat, lon], {
+            color: 'cyan', radius: 10, fillOpacity: 0.8
+        }).addTo(map).bindPopup("現在地（デュエリスト）");
+
+        // 周辺にモンスターを配置
+        spawnMonstersNearby(lat, lon);
+    }
+
+    // 2. モンスターを周辺に配置
+    function spawnMonstersNearby(lat, lon) {
+        document.getElementById('status-bar').innerText = "周辺に高エネルギー反応アリ！";
+        
+        for(let i=0; i < 5; i++) {
             const monster = monsterList[Math.floor(Math.random() * monsterList.length)];
-            createIcon(monster);
+            
+            // 現在地の近く（ランダムなオフセット）
+            const mLat = lat + (Math.random() - 0.5) * 0.005;
+            const mLon = lon + (Math.random() - 0.5) * 0.005;
+
+            const icon = L.icon({
+                iconUrl: monster.img,
+                iconSize: [50, 72],
+                className: 'monster-icon'
+            });
+
+            const marker = L.marker([mLat, mLon], { icon: icon }).addTo(map);
+            
+            // タップ（クリック）で捕獲画面へ
+            marker.on('click', () => {
+                openCapture(monster, marker);
+            });
+
+            monsterMarkers.push(marker);
         }
     }
 
-    function createIcon(card) {
-        const icon = document.createElement('img');
-        icon.src = card.img;
-        icon.className = 'monster-icon';
-        
-        // 画面の重なりを防ぐため、少しずつ位置をずらす
-        icon.style.left = (10 + Math.random() * 70) + "%";
-        icon.style.top = (15 + Math.random() * 65) + "%";
-        
-        icon.onclick = () => {
-            currentMonster = card;
-            document.getElementById('m-name').innerText = card.name;
-            document.getElementById('monster-art').src = card.img;
-            document.getElementById('capture-screen').style.display = 'flex';
-        };
-        map.appendChild(icon);
+    // 3. 捕獲画面を開く
+    function openCapture(monster, marker) {
+        currentMonster = { monster, marker };
+        document.getElementById('m-name').innerText = monster.name;
+        document.getElementById('monster-art').src = monster.img;
+        document.getElementById('capture-screen').style.display = 'flex';
     }
 
-    function captureMonster() {
-        alert(`【封印成功】\n${currentMonster.name} を入手した！`);
-        // 捕まえたらリロードして再配置
-        location.reload(); 
+    // 4. 封印（ゲット）処理
+    function sealMonster() {
+        alert(`${currentMonster.monster.name} を封印した！`);
+        
+        // 地図から消す
+        map.removeLayer(currentMonster.marker);
+        document.getElementById('capture-screen').style.display = 'none';
+
+        // LocalStorageに保存（育成機能の準備）
+        let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
+        deck.push({ ...currentMonster.monster, level: 1 });
+        localStorage.setItem('myDeck', JSON.stringify(deck));
     }
 
-    // 読み込み完了時に実行
-    window.onload = spawnMonsters;
+    // GPS取得
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                initMap(pos.coords.latitude, pos.coords.longitude);
+            },
+            (err) => {
+                alert("GPSが取得できませんでした。東京駅付近を表示します。");
+                initMap(35.6812, 139.7671);
+            }
+        );
+    } else {
+        alert("お使いのブラウザはGPS非対応です。");
+        initMap(35.6812, 139.7671);
+    }
 </script>
+
 </body>
 </html>
