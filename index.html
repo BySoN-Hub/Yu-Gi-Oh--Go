@@ -19,32 +19,35 @@
         #deck-btn-ui { bottom: 40px; left: 20px; }
         #gps-btn-ui { bottom: 40px; right: 20px; font-size: 24px; }
         
-        /* --- トップ画面：カードイラスト追加 --- */
+        /* トップ画面 */
         #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         .top-title { color:var(--gold); text-shadow:0 0 15px #f00; margin-bottom: 20px; font-size: 2.5rem; }
         .top-cards-container { display: flex; gap: 20px; align-items: center; margin-bottom: 40px; }
         .top-card-img { width: 100px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
         .start-btn { padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; font-size: 1.1rem; }
 
-        /* --- バトル画面：カードイラストを中央へ、ステータスを隣へ --- */
+        /* --- バトル画面：レイアウト修正 --- */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
-        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px 5px; gap: 20px; position: relative; }
+        .battle-stage { flex: 1; position: relative; padding-top: 40px; }
         
-        /* カードとステータスを横に並べるボックス */
-        .m-row { width: 100%; display: flex; align-items: center; justify-content: center; height: 30dvh; position: relative; gap: 10px; }
-        .battle-img { height: 100%; width: auto; max-width: 45%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; transition: transform 1s, opacity 1s; }
-        
-        /* ステータスUIを右側に固定 */
-        .status-ui { width: 135px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 8px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
-        .st-name { border-bottom: 1px solid #999; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
-        .hp-bar-bg { width: 100%; height: 10px; background: #ccc; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid #777; }
-        .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-        .hp-num { text-align: right; font-size: 11px; margin-top: 3px; font-family: monospace; }
+        .m-row { position: absolute; width: 100%; display: flex; align-items: center; justify-content: center; height: 25dvh; gap: 8px; }
+        /* 敵：右寄せ気味に配置 */
+        .m-row.wild { top: 10dvh; flex-direction: row-reverse; padding-right: 5%; }
+        /* 自分：左寄せ気味に配置 */
+        .m-row.player { top: 40dvh; flex-direction: row; padding-left: 5%; }
 
-        /* 封印演出の中心をイラストに合わせる */
-        #seal-base-card { position: absolute; height: 25dvh; width: calc(25dvh * 0.68); background: #3c2415; border: 3px solid var(--gold); border-radius: 5px; display: none; z-index: 9400; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
-        #fusion-vortex { position: absolute; width: 200px; height: 200px; display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
-        .vortex-anim { width: 100%; height: 100%; border: 12px dashed var(--fusion); border-radius: 50%; animation: spin-v 1.1s ease-in forwards; box-shadow: inset 0 0 20px var(--fusion); }
+        .battle-img { height: 100%; width: auto; max-width: 40%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; transition: transform 1s, opacity 1s; }
+        
+        .status-ui { width: 130px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
+        .st-name { border-bottom: 1px solid #999; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+        .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; border: 1px solid #777; }
+        .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
+        .hp-num { text-align: right; font-size: 10px; margin-top: 2px; font-family: monospace; }
+
+        /* --- 封印パーツ：座標はJSで動的に制御 --- */
+        #seal-base-card { position: absolute; background: #3c2415; border: 3px solid var(--gold); border-radius: 5px; display: none; z-index: 9400; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
+        #fusion-vortex { position: absolute; display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
+        .vortex-anim { width: 220px; height: 220px; border: 12px dashed var(--fusion); border-radius: 50%; animation: spin-v 1.1s ease-in forwards; box-shadow: inset 0 0 20px var(--fusion); }
         @keyframes spin-v { 0% { transform: scale(2.5) rotate(0deg); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(0) rotate(720deg); opacity: 0; } }
         .sucking { transform: scale(0) rotate(360deg) !important; opacity: 0 !important; }
 
@@ -62,7 +65,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 0.9.16</div>
+<div id="version-tag">Ver 0.9.17</div>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
@@ -79,10 +82,8 @@
 
 <div id="battle-screen">
     <div class="battle-stage">
-        <div class="m-row">
+        <div class="m-row wild">
             <img id="w-img" class="battle-img" src="">
-            <div id="seal-base-card"></div>
-            <div id="fusion-vortex"><div class="vortex-anim"></div></div>
             <div class="status-ui">
                 <div id="w-name-label" class="st-name">---</div>
                 <div id="w-stat-label">Lv.1 ATK:0</div>
@@ -91,7 +92,10 @@
             </div>
         </div>
 
-        <div class="m-row">
+        <div id="seal-base-card"></div>
+        <div id="fusion-vortex"><div class="vortex-anim"></div></div>
+
+        <div class="m-row player">
             <img id="p-img" class="battle-img" src="" style="border-color: var(--cyan);">
             <div class="status-ui">
                 <div id="p-name-label" class="st-name">---</div>
@@ -114,10 +118,6 @@
 
 <div id="deck-screen">
     <h3 style="text-align:center; color:var(--gold); margin-top: 20px;">DECK</h3>
-    <div style="display:flex; align-items:center; justify-content:space-around; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid var(--cyan); margin-bottom:10px;">
-        <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px;"></div></div>
-        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold;">交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold;">強化</button></div>
-    </div>
     <div id="deck-grid" class="deck-grid"></div>
     <button onclick="closeDeck()" style="width:100%; padding:15px; background:#444; border:none; border-radius:8px; margin: 10px 0 20px 0; color:white; font-weight:bold;">閉じる</button>
 </div>
@@ -127,7 +127,7 @@
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"level":1,"count":1}]');
     let selectedIdx = -1;
 
-    const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"ブラック・マジシャン・ガール", id:38033121, atk:2000}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"オベリスクの巨神兵", id:13839129, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
+    const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"オベリスクの巨神兵", id:13839129, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
 
     function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); }
 
@@ -154,6 +154,7 @@
                 currentMarker = marker;
                 document.getElementById('battle-screen').style.display = 'flex';
                 document.getElementById('w-img').classList.remove('sucking');
+                document.getElementById('seal-btn').classList.remove('btn-chance');
                 updateUI();
                 document.getElementById('msg-text').innerText = `${bData.e.name}が現れた！`;
             });
@@ -169,7 +170,6 @@
         document.getElementById('w-hp-max').innerText = Math.floor(bData.e.max);
         document.getElementById('w-img').src = bData.e.img;
         document.getElementById('p-name-label').innerText = bData.p.name;
-        // レベルを自動計算（ATK1000ごとにLv1アップとする）
         const autoLv = Math.floor(bData.p.atk / 1000) + 1;
         document.getElementById('p-stat-label').innerText = `Lv.${autoLv} ATK:${bData.p.atk}`;
         document.getElementById('p-hp-fill').style.width = (bData.p.hp/bData.p.max*100) + '%';
@@ -187,23 +187,23 @@
             updateUI();
             if(bData.e.hp <= 0) { document.getElementById('msg-text').innerText = "チャンス！カードに封印だ！"; document.getElementById('seal-btn').classList.add('btn-chance'); bData.busy = false; return; }
         } else if(act === 'seal') {
-            // エフェクトの中心を敵カードの位置に設定
             const eImg = document.getElementById('w-img');
             const rect = eImg.getBoundingClientRect();
-            const stage = document.querySelector('.battle-stage').getBoundingClientRect();
-            
-            // カードの中心座標を計算
-            const centerX = rect.left + rect.width / 2 - stage.left;
-            const centerY = rect.top + rect.height / 2 - stage.top;
-            
-            // エフェクトパーツの位置を修正
             const vortex = document.getElementById('fusion-vortex');
             const baseCard = document.getElementById('seal-base-card');
             
+            // 敵カードの「画面上の絶対位置」を取得してエフェクトを合わせる
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
             vortex.style.left = `${centerX}px`;
             vortex.style.top = `${centerY}px`;
-            baseCard.style.left = `${centerX - baseCard.offsetWidth/2}px`;
-            baseCard.style.top = `${centerY - baseCard.offsetHeight/2}px`;
+            vortex.style.transform = `translate(-50%, -50%)`;
+            
+            baseCard.style.left = `${rect.left}px`;
+            baseCard.style.top = `${rect.top}px`;
+            baseCard.style.width = `${rect.width}px`;
+            baseCard.style.height = `${rect.height}px`;
 
             baseCard.style.display = 'block';
             vortex.style.display = 'flex';
@@ -236,29 +236,12 @@
 
     function openDeck() { document.getElementById('deck-screen').style.display = 'flex'; renderDeck(); }
     function renderDeck() {
-        const main = myDeck[0];
-        document.getElementById('main-mon-img').src = main.img;
-        const autoLv = Math.floor(main.atk / 1000) + 1;
-        document.getElementById('main-mon-stat').innerText = `${main.name} (Lv.${autoLv} ATK:${main.atk})`;
         const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
-        myDeck.forEach((m, i) => { if(i === 0) return; grid.innerHTML += `<div class="card-box" onclick="selectedIdx=${i};renderDeck();"><img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg"></div>`; });
+        myDeck.forEach((m, i) => { grid.innerHTML += `<div class="card-box" onclick="selectedIdx=${i};renderDeck();"><img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" style="width:100%"></div>`; });
     }
-    function executeSwap() {
-        if(selectedIdx === -1) return;
-        const [target] = myDeck.splice(selectedIdx, 1); myDeck.unshift(target);
-        localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
-    }
-    function executeEnhance() {
-        if(selectedIdx === -1) return;
-        myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.05);
-        // ATKに応じてレベルを再計算
-        myDeck[0].level = Math.floor(myDeck[0].atk / 1000) + 1;
-        myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
-        localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
-    }
+    function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
     function finishSeal() { document.getElementById('success-pop').style.display = 'none'; if(currentMarker) map.removeLayer(currentMarker); closeBattleUI(); }
     function closeBattleUI() { document.getElementById('battle-screen').style.display = 'none'; bData.busy = false; setTimeout(() => map.invalidateSize(), 200); }
-    function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
     function refreshGPS() { navigator.geolocation.getCurrentPosition(pos => { map.setView([pos.coords.latitude, pos.coords.longitude]); spawn(pos.coords.latitude, pos.coords.longitude); }); }
 </script>
 </body>
