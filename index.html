@@ -18,10 +18,12 @@
         #deck-btn-ui { bottom: 40px; left: 20px; }
         #gps-btn-ui { bottom: 40px; right: 20px; font-size: 24px; }
         
+        /* --- トップ画面：千年パズル追加 --- */
         #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         .top-title { color:var(--gold); text-shadow:0 0 15px #f00; margin-bottom: 20px; font-size: 2.5rem; }
-        .top-cards-container { display: flex; gap: 20px; align-items: center; margin-bottom: 40px; }
-        .top-card-img { width: 100px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .top-cards-container { display: flex; gap: 15px; align-items: center; margin-bottom: 40px; }
+        .top-card-img { width: 85px; border: 2px solid #555; border-radius: 5px; opacity: 0.8; }
+        .millennium-puzzle { width: 110px; border: 3px solid var(--gold); border-radius: 5px; box-shadow: 0 0 25px var(--gold); z-index: 10; transform: scale(1.1); }
         .start-btn { padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; }
 
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
@@ -40,24 +42,12 @@
         @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
         .sucking { transform: scale(0) rotate(360deg) !important; opacity: 0 !important; }
 
-        /* --- デッキ画面：枠の最適化 --- */
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 20px; }
-        
-        /* 控えカード枠をイラストにピッタリ合わせる */
-        .card-box { 
-            aspect-ratio: 1 / 1.45; /* 公式カードの比率に固定 */
-            border: 1px solid #444; 
-            background: #111; 
-            text-align: center; 
-            position: relative; 
-            overflow: hidden;
-            border-radius: 4px;
-        }
+        .card-box { aspect-ratio: 1 / 1.45; border: 1px solid #444; background: #111; text-align: center; position: relative; overflow: hidden; border-radius: 4px; }
         .card-box.selected { border: 2px solid var(--gold); background: rgba(255,215,0,0.15); box-shadow: 0 0 10px var(--gold); }
         .card-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        
         .stock-badge { position: absolute; bottom: 4px; right: 4px; background: var(--red); color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; font-weight: bold; z-index: 5; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
         #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         #msg-window { height: 50px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; text-align: center; z-index: 9100; }
@@ -68,13 +58,14 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.0.7</div>
+<div id="version-tag">Ver 1.0.8</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
     <div class="top-cards-container">
         <img class="top-card-img" src="https://images.ygoprodeck.com/images/cards/46986414.jpg">
+        <img class="millennium-puzzle" src="https://images.ygoprodeck.com/images/cards/32012841.jpg">
         <img class="top-card-img" src="https://images.ygoprodeck.com/images/cards/89631139.jpg">
     </div>
     <button class="start-btn" onclick="startGame()">闇のゲームを開始</button>
