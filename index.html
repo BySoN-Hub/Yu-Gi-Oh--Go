@@ -18,7 +18,6 @@
         #deck-btn-ui { bottom: 40px; left: 20px; }
         #gps-btn-ui { bottom: 40px; right: 20px; font-size: 24px; }
         
-        /* --- トップ画面：main-vis.png 背景設定 --- */
         #top-screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; 
             background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('main-vis.png');
@@ -28,9 +27,8 @@
         .top-title { color:var(--gold); text-shadow:0 0 20px #f00, 0 0 10px #000; margin-bottom: 20px; font-size: 3rem; font-style: italic; }
         .top-cards-container { display: flex; gap: 20px; align-items: center; margin-bottom: 40px; }
         .top-card-img { width: 90px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.7); }
-        .start-btn { padding:15px 40px; background:rgba(0,0,0,0.8); color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; font-size: 1.2rem; box-shadow: 0 0 20px rgba(255,215,0,0.4); }
+        .start-btn { padding:15px 40px; background:rgba(0,0,0,0.8); color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; font-size: 1.2rem; }
 
-        /* バトル画面 */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
         .battle-stage { flex: 1; position: relative; padding: 20px 0; }
         .m-row { position: absolute; width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; justify-content: center; gap: 10px; }
@@ -47,7 +45,6 @@
         @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
         .sucking { transform: scale(0) rotate(360deg) !important; opacity: 0 !important; }
 
-        /* デッキ画面 */
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
@@ -64,7 +61,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.0.9</div>
+<div id="version-tag">Ver 1.1.0</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
@@ -139,7 +136,7 @@
         const randomSong = bgmList[Math.floor(Math.random() * bgmList.length)];
         audio.src = randomSong;
         audio.volume = 0.3;
-        audio.play().catch(e => console.log("Audio auto-play blocked."));
+        audio.play().catch(e => console.log("Audio play blocked."));
     }
 
     const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
@@ -232,6 +229,7 @@
         document.getElementById('main-mon-stat').innerText = `Lv.${mainLv} ATK:${main.atk}`;
         const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
         myDeck.forEach((m, i) => {
+            // インデックスに関わらず全て描画（1枚目は表示上スキップしたい場合は条件追加も可能ですが、強化素材にするために表示）
             grid.innerHTML += `<div class="card-box ${selectedIdx === i ? 'selected' : ''}" onclick="selectedIdx=${i};renderDeck();">
                 ${m.count > 1 ? `<div class="stock-badge">×${m.count}</div>` : ''}
                 <img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg"></div>`;
@@ -244,6 +242,8 @@
     }
     function executeEnhance() {
         if(selectedIdx === -1) return;
+        // 同種カードでも自分自身を素材にはできない（枚数が1枚なら不可、2枚以上なら1枚減らす）
+        if(selectedIdx === 0 && myDeck[0].count <= 1) { alert("メインモンスターを素材にはできません"); return; }
         myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.1);
         myDeck[selectedIdx].count--; 
         if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
