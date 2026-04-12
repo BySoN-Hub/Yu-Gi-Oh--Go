@@ -7,28 +7,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --gold: #ffd700; --cyan: #00ffff; --bg: #050510; }
+        :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --bg: #050510; }
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100vh; }
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; }
         
-        /* マップ上のイラスト（枠を隠してイラストを強調） */
-        .monster-icon {
-            filter: drop-shadow(0 0 10px var(--gold));
-            border-radius: 50%; /* 丸く切り抜いてキャラを際立たせる */
-            object-fit: cover;
-            object-position: top; /* カード上部のイラスト部分を表示 */
-            border: 2px solid var(--gold);
-            background: rgba(0,0,0,0.5);
-        }
-
-        /* 左下デッキボタン */
-        #deck-btn { 
-            position: fixed; bottom: 30px; left: 20px; width: 65px; height: 65px; 
-            background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%;
-            color: var(--gold); font-weight: bold; z-index: 1000; display: flex; 
-            align-items: center; justify-content: center; box-shadow: 0 0 15px var(--gold);
-            pointer-events: auto;
-        }
+        .monster-icon { filter: drop-shadow(0 0 8px var(--gold)); border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid var(--gold); background: rgba(0,0,0,0.5); }
+        #deck-btn { position: fixed; bottom: 30px; left: 20px; width: 65px; height: 65px; background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); font-weight: bold; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--gold); }
 
         /* バトル画面 */
         #seal-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(to bottom, #111, #000); display:none; flex-direction:column; z-index: 2000; }
@@ -39,14 +23,14 @@
         /* デッキ・強化画面 */
         #deck-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); display:none; z-index: 4000; padding: 20px; box-sizing: border-box; color: white; overflow-y: auto; }
         .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .card-box { border: 2px solid #333; padding: 5px; border-radius: 5px; text-align: center; }
-        .card-box.active-card { border-color: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
-        .card-box.selected { border-color: var(--gold); background: rgba(255,215,0,0.1); }
+        .card-box { border: 2px solid #333; padding: 5px; border-radius: 5px; text-align: center; transition: 0.2s; }
+        .card-box.is-main { background: rgba(0,255,255,0.15); border-color: var(--cyan); } /* 現在の戦闘要員 */
+        .card-box.base-select { border-color: var(--gold); box-shadow: 0 0 10px var(--gold); transform: scale(1.05); } /* 強化ベース */
+        .card-box.sac-select { border-color: var(--red); opacity: 0.7; } /* 生贄 */
         .card-box img { width: 100%; border-radius: 3px; }
 
-        /* 成功ポップアップ */
         #result-popup { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:none; flex-direction:column; align-items:center; justify-content:center; z-index: 5000; }
-        #result-card { width: 200px; border: 4px solid white; transform: scale(0); transition: 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.49); }
+        #result-card { width: 200px; border: 4px solid white; transform: scale(0); transition: 0.5s; }
         #result-card.show { transform: scale(1); }
     </style>
 </head>
@@ -59,14 +43,14 @@
     <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;">
         <h3 id="w-name" style="color:var(--gold);"></h3>
         <img id="w-img" style="width:180px; margin:10px 0;">
-        <div style="width:80%; height:8px; background:#333; border-radius:4px;"><div id="w-hp" style="width:100%; height:100%; background:lime; transition:0.3s;"></div></div>
+        <div style="width:80%; height:8px; background:#333; border-radius:4px;"><div id="w-hp" style="width:100%; height:100%; background:lime;"></div></div>
         
         <div style="margin-top:30px; text-align:center;">
             <img id="p-img" style="width:100px; border:2px solid var(--cyan);">
-            <p id="p-status"></p>
+            <p id="p-status" style="font-weight:bold;"></p>
         </div>
     </div>
-    <div class="msg-window" id="battle-msg">野生のモンスターに遭遇した！</div>
+    <div class="msg-window" id="battle-msg"></div>
     <div id="command-panel">
         <button class="cmd-btn" onclick="doAction('attack')">攻撃</button>
         <button class="cmd-btn" onclick="doAction('seal')">封印</button>
@@ -75,29 +59,29 @@
 </div>
 
 <div id="result-popup" onclick="location.reload()">
-    <div style="color:var(--gold); font-size:30px; font-weight:bold; margin-bottom:20px;">封印成功ッ！！</div>
+    <div style="color:var(--gold); font-size:24px; font-weight:bold; margin-bottom:15px;">封印成功ッ！！</div>
     <img id="result-card" src="">
-    <div style="color:white; margin-top:20px;">新しいカードをデッキに加えた！</div>
 </div>
 
 <div id="deck-screen">
-    <h2 style="color:var(--gold); text-align:center;">DECK & POWER UP</h2>
-    <p id="deck-info" style="font-size:12px; text-align:center;">ベースを選び、生贄を選んで強化せよ</p>
+    <h3 style="text-align:center; color:var(--gold); margin:0;">デッキ & 強化</h3>
     <div id="deck-grid" class="grid"></div>
-    <div style="margin-top:20px; display:flex; gap:10px;">
-        <button id="set-main-btn" onclick="setMain()" style="flex:1; padding:15px; background:var(--cyan); display:none;">戦闘に出す</button>
-        <button id="powerup-btn" onclick="executePowerUp()" style="flex:1; padding:15px; background:var(--gold); display:none;">生贄強化</button>
+    <div style="margin-top:15px; display:flex; flex-direction:column; gap:8px;">
+        <button id="set-main-btn" onclick="setMain()" style="padding:12px; background:var(--cyan); color:black; border:none; display:none; font-weight:bold;">このカードで戦う</button>
+        <button id="powerup-btn" onclick="executePowerUp()" style="padding:12px; background:var(--red); color:white; border:none; display:none; font-weight:bold;">生贄強化を実行</button>
+        <button onclick="resetSelection()" style="padding:10px; background:#444; color:white; border:none;">選択をリセット</button>
+        <button onclick="closeDeck()" style="padding:15px; background:#222; color:white; border:none; margin-top:5px;">マップに戻る</button>
     </div>
-    <button onclick="closeDeck()" style="width:100%; padding:15px; margin-top:10px; background:#333; color:white; border:none;">戻る</button>
 </div>
 
 <script>
     let map, currentEnemy = null;
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"クリボー","img":"https://images.ygoprodeck.com/images/cards/40640057.jpg","atk":300,"level":1,"uid":1}]');
-    let selectedBase = null;
-    let selectedSacrifices = [];
+    
+    let baseCard = null;
+    let sacCards = [];
 
-    // GPS/MAP
+    // MAP
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             map = L.map('map', {zoomControl:false}).setView([pos.coords.latitude, pos.coords.longitude], 17);
@@ -112,10 +96,8 @@
             {name:"青眼の白龍", img:"https://images.ygoprodeck.com/images/cards/89631139.jpg", atk:3000},
             {name:"ブラック・マジシャン", img:"https://images.ygoprodeck.com/images/cards/46986414.jpg", atk:2500},
             {name:"真紅眼の黒竜", img:"https://images.ygoprodeck.com/images/cards/74677422.jpg", atk:2400},
-            {name:"デーモンの召喚", img:"https://images.ygoprodeck.com/images/cards/70781052.jpg", atk:2500},
-            {name:"エルフの剣士", img:"https://images.ygoprodeck.com/images/cards/91152256.jpg", atk:1400}
+            {name:"デーモンの召喚", img:"https://images.ygoprodeck.com/images/cards/70781052.jpg", atk:2500}
         ];
-        // 出現数を12体に増加
         for(let i=0; i<12; i++) {
             let m = pool[Math.floor(Math.random()*pool.length)];
             let marker = L.marker([lat+(Math.random()-0.5)*0.006, lon+(Math.random()-0.5)*0.006], {
@@ -124,28 +106,30 @@
             marker.on('click', () => {
                 currentEnemy = {...m, hp:100, marker};
                 document.getElementById('seal-screen').style.display = 'flex';
+                document.getElementById('battle-msg').innerText = `${currentEnemy.name}が現れた！`;
                 updateBattleUI();
             });
         }
     }
 
     function updateBattleUI() {
-        const p = myDeck[0];
+        const p = myDeck[0]; // デッキの先頭が戦う
         document.getElementById('w-name').innerText = currentEnemy.name;
         document.getElementById('w-img').src = currentEnemy.img;
         document.getElementById('w-hp').style.width = currentEnemy.hp + '%';
+        
         document.getElementById('p-img').src = p.img;
-        document.getElementById('p-status').innerText = `${p.name} ATK:${p.atk}`;
+        document.getElementById('p-status').innerText = `${p.name} ATK:${p.atk} (Lv.${p.level})`;
     }
 
     function doAction(type) {
-        const msg = document.getElementById('battle-msg');
+        const p = myDeck[0];
         if(type === 'attack') {
             currentEnemy.hp = Math.max(0, currentEnemy.hp - 35);
-            msg.innerText = `${myDeck[0].name}の攻撃！ダメージを与えた！`;
+            document.getElementById('battle-msg').innerText = `${p.name}の攻撃！`;
             updateBattleUI();
         } else {
-            msg.innerText = "封印カード展開！いけっ！";
+            document.getElementById('battle-msg').innerText = "封印カード、発動！";
             setTimeout(() => {
                 if(Math.random() > (currentEnemy.hp/100)) {
                     document.getElementById('result-card').src = currentEnemy.img;
@@ -154,73 +138,75 @@
                     myDeck.push({...currentEnemy, level:1, uid:Date.now()});
                     localStorage.setItem('myDeck', JSON.stringify(myDeck));
                 } else {
-                    msg.innerText = "封印失敗！もっと弱らせろ！";
+                    document.getElementById('battle-msg').innerText = "封印失敗！もっと弱らせろ！";
                 }
             }, 800);
         }
     }
 
-    // デッキ・強化関連
+    // デッキ・強化
     function openDeck() {
         document.getElementById('deck-screen').style.display = 'block';
-        selectedBase = null; selectedSacrifices = [];
-        renderDeck();
+        resetSelection();
     }
 
     function renderDeck() {
         const grid = document.getElementById('deck-grid');
         grid.innerHTML = '';
         myDeck.forEach((m, i) => {
-            const isBase = selectedBase?.uid === m.uid;
-            const isSac = selectedSacrifices.includes(m.uid);
+            let cls = 'card-box';
+            if(i === 0) cls += ' is-main';
+            if(baseCard && baseCard.uid === m.uid) cls += ' base-select';
+            if(sacCards.some(s => s.uid === m.uid)) cls += ' sac-select';
+            
             grid.innerHTML += `
-                <div class="card-box ${i==0?'active-card':''} ${isBase?'selected':''} ${isSac?'selected':''}" onclick="selectCard(${i})">
+                <div class="${cls}" onclick="handleSelect(${i})">
                     <img src="${m.img}">
-                    <div style="font-size:9px;">Lv.${m.level}<br>ATK:${m.atk}</div>
+                    <div style="font-size:10px; margin-top:3px;">ATK:${m.atk}</div>
                 </div>`;
         });
-        document.getElementById('set-main-btn').style.display = selectedBase ? 'block' : 'none';
-        document.getElementById('powerup-btn').style.display = selectedSacrifices.length > 0 ? 'block' : 'none';
+        
+        document.getElementById('set-main-btn').style.display = (baseCard && myDeck[0].uid !== baseCard.uid) ? 'block' : 'none';
+        document.getElementById('powerup-btn').style.display = (baseCard && sacCards.length > 0) ? 'block' : 'none';
     }
 
-    function selectCard(index) {
-        const card = myDeck[index];
-        if(!selectedBase) {
-            selectedBase = card;
-        } else if(selectedBase.uid === card.uid) {
-            selectedBase = null; selectedSacrifices = [];
+    function handleSelect(i) {
+        const card = myDeck[i];
+        if(!baseCard) {
+            baseCard = card;
+        } else if(baseCard.uid === card.uid) {
+            baseCard = null; sacCards = [];
         } else {
-            const sIdx = selectedSacrifices.indexOf(card.uid);
-            if(sIdx > -1) selectedSacrifices.splice(sIdx, 1);
-            else selectedSacrifices.push(card.uid);
+            const sIdx = sacCards.findIndex(s => s.uid === card.uid);
+            if(sIdx > -1) sacCards.splice(sIdx, 1);
+            else sacCards.push(card);
         }
         renderDeck();
     }
 
     function setMain() {
-        const idx = myDeck.findIndex(m => m.uid === selectedBase.uid);
+        const idx = myDeck.findIndex(m => m.uid === baseCard.uid);
         const [target] = myDeck.splice(idx, 1);
-        myDeck.unshift(target);
-        saveAndReloadDeck();
+        myDeck.unshift(target); // 先頭に移動
+        localStorage.setItem('myDeck', JSON.stringify(myDeck));
+        resetSelection();
     }
 
     function executePowerUp() {
-        if(!confirm("選んだモンスターを生贄に捧げて強化しますか？")) return;
-        const base = myDeck.find(m => m.uid === selectedBase.uid);
-        selectedSacrifices.forEach(uid => {
-            const idx = myDeck.findIndex(m => m.uid === uid);
+        if(!confirm("選んだモンスターを生贄にしますか？")) return;
+        const target = myDeck.find(m => m.uid === baseCard.uid);
+        sacCards.forEach(s => {
+            const idx = myDeck.findIndex(m => m.uid === s.uid);
             myDeck.splice(idx, 1);
-            base.level++;
-            base.atk = Math.floor(base.atk * 1.2);
+            target.level++;
+            target.atk = Math.floor(target.atk * 1.2);
         });
-        saveAndReloadDeck();
-    }
-
-    function saveAndReloadDeck() {
         localStorage.setItem('myDeck', JSON.stringify(myDeck));
-        openDeck();
+        resetSelection();
+        alert("強化完了！");
     }
 
+    function resetSelection() { baseCard = null; sacCards = []; renderDeck(); }
     function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
 </script>
 </body>
