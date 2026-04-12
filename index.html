@@ -5,52 +5,72 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yu-Gi-Oh! GO</title>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #000; color: white; overflow: hidden; text-align: center; }
-        #map-container { width: 100vw; height: 100vh; background: radial-gradient(circle, #1a1a2e, #000); position: relative; }
+        body { margin: 0; font-family: sans-serif; background: #000; color: white; overflow: hidden; }
         
-        /* マップ上のモンスター */
-        .monster-icon {
-            position: absolute; width: 80px; height: 110px;
-            cursor: pointer; transition: transform 0.3s;
-            filter: drop-shadow(0 0 10px gold); border-radius: 5px;
+        /* マップ背景：グリッド線を入れて「地面」を感じさせる */
+        #map-container { 
+            width: 100vw; height: 100vh; 
+            background-color: #0a0a20;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            position: relative; 
         }
-        .monster-icon:hover { transform: scale(1.2) rotate(5deg); }
+        
+        /* モンスターの見た目を改善 */
+        .monster-icon {
+            position: absolute; 
+            width: 90px; height: 130px;
+            cursor: pointer; 
+            transition: transform 0.2s;
+            border: 2px solid rgba(255, 215, 0, 0.8);
+            border-radius: 5px;
+            background: #222; /* 画像が読み込まれるまでの色 */
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+            z-index: 10;
+        }
+        .monster-icon:hover { transform: scale(1.1); z-index: 20; }
 
         /* 捕獲画面 */
         #capture-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none;
+            background: rgba(0,0,0,0.9); display: none;
             flex-direction: column; align-items: center; justify-content: center; z-index: 100;
         }
 
-        #monster-art { width: 220px; border: 2px solid gold; border-radius: 10px; box-shadow: 0 0 30px rgba(255,215,0,0.5); margin: 20px 0; }
+        #monster-art { width: 240px; border: 3px solid #ffd700; border-radius: 10px; margin: 20px 0; }
         
+        /* 封印カード */
         #seal-card {
-            width: 100px; height: 150px;
-            background: linear-gradient(45deg, #a06000, #ffd700);
+            width: 100px; height: 145px;
+            background: linear-gradient(135deg, #8b4513, #daa520);
             border: 3px solid #fff; border-radius: 8px;
-            cursor: pointer; animation: pulse 1.5s infinite;
+            cursor: pointer; animation: bounce 2s infinite;
         }
-        @keyframes pulse { 0%, 100% {transform:scale(1);} 50% {transform:scale(1.1);} }
+        @keyframes bounce { 0%, 100% {transform:translateY(0);} 50% {transform:translateY(-10px);} }
 
-        .btn-close { position: absolute; top: 20px; right: 20px; font-size: 40px; cursor: pointer; color: #ff4560; }
-        #status-msg { position: absolute; top: 10px; width: 100%; color: gold; font-weight: bold; }
+        #status-msg { 
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            color: #ffd700; font-weight: bold; font-size: 1.2rem; text-shadow: 0 0 10px #000;
+            z-index: 50;
+        }
+        .btn-close { position: absolute; top: 20px; right: 20px; font-size: 40px; cursor: pointer; color: white; }
     </style>
 </head>
 <body>
 
-<div id="status-msg">モンスター探索中...</div>
+<div id="status-msg">周囲をスキャン中...</div>
 
-<div id="map-container">
-    </div>
+<div id="map-container"></div>
 
 <div id="capture-screen">
     <span class="btn-close" onclick="closeCapture()">&times;</span>
-    <h2 id="m-name">モンスター名</h2>
-    <p id="m-stats">ATK: --- / DEF: ---</p>
+    <h2 id="m-name"></h2>
+    <p id="m-stats"></p>
     <img id="monster-art" src="" alt="">
-    <p>カードをタップして「封印」せよ！</p>
     <div id="seal-card" onclick="attemptCapture()"></div>
+    <p style="margin-top:15px;">タップして封印！</p>
 </div>
 
 <script>
@@ -59,51 +79,55 @@
     const statusMsg = document.getElementById('status-msg');
     let currentMonster = null;
 
-    // モンスターをマップに出現させる
     async function spawnMonster() {
         try {
-            // ランダムカード取得API（キャッシュ回避のためタイムスタンプ付与）
-            const res = await fetch(`https://db.ygoprodeck.com/api/v7/randomcard.php?t=${Date.now()}`);
-            if (!res.ok) throw new Error('API Error');
+            const res = await fetch(`https://db.ygoprodeck.com/api/v7/randomcard.php?t=${Math.random()}`);
             const data = await res.json();
-            
-            const icon = document.createElement('img');
-            // 画像がない場合はスキップ
-            if(!data.card_images) return spawnMonster();
+            const card = data;
 
-            icon.src = data.card_images[0].image_url_small;
+            // モンスターカードのみを対象にする（魔法・罠を除外したい場合はここでチェック）
+            if (!card.card_images) return spawnMonster();
+
+            const icon = document.createElement('img');
+            icon.src = card.card_images[0].image_url_small;
             icon.className = 'monster-icon';
-            icon.style.left = Math.random() * 70 + 15 + "%";
-            icon.style.top = Math.random() * 70 + 15 + "%";
             
-            icon.onclick = () => openCapture(data);
+            // 画面の端すぎない位置に配置 (15%〜75%の間)
+            const posX = 15 + Math.random() * 60;
+            const posY = 15 + Math.random() * 60;
+            icon.style.left = `${posX}%`;
+            icon.style.top = `${posY}%`;
+            
+            icon.onclick = () => openCapture(card);
             map.appendChild(icon);
-            statusMsg.innerText = "周囲にモンスターを確認！";
+            
+            statusMsg.innerText = "モンスターを発見したぞ！";
         } catch (e) {
-            console.error("取得失敗:", e);
-            statusMsg.innerText = "通信エラー、再試行中...";
-            setTimeout(spawnMonster, 3000); // 3秒後に再試行
+            console.error(e);
+            setTimeout(spawnMonster, 2000);
         }
     }
 
     function openCapture(monster) {
         currentMonster = monster;
         document.getElementById('m-name').innerText = monster.name;
-        document.getElementById('m-stats').innerText = `ATK: ${monster.atk ?? '---'} / DEF: ${monster.def ?? '---'}`;
+        const atk = monster.atk !== undefined ? monster.atk : "---";
+        const def = monster.def !== undefined ? monster.def : "---";
+        document.getElementById('m-stats').innerText = `ATK / ${atk}  DEF / ${def}`;
         document.getElementById('monster-art').src = monster.card_images[0].image_url;
         captureScreen.style.display = 'flex';
     }
 
     function attemptCapture() {
         const card = document.getElementById('seal-card');
-        card.style.transition = "1s all";
-        card.style.transform = "scale(0) rotate(720deg)";
+        card.style.transition = "transform 0.8s ease-in";
+        card.style.transform = "scale(0) rotate(1080deg)";
 
         setTimeout(() => {
-            alert(`封印完了！\n${currentMonster.name} を手に入れた！`);
+            alert(`${currentMonster.name} を封印した！`);
             saveToDeck(currentMonster);
-            location.reload(); // マップをリセット
-        }, 1000);
+            location.reload(); 
+        }, 800);
     }
 
     function closeCapture() {
@@ -112,18 +136,14 @@
 
     function saveToDeck(monster) {
         let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
-        deck.push({
-            name: monster.name,
-            atk: monster.atk,
-            img: monster.card_images[0].image_url
-        });
+        deck.push({ name: monster.name, atk: monster.atk, img: monster.card_images[0].image_url });
         localStorage.setItem('myDeck', JSON.stringify(deck));
     }
 
-    // 起動時に3体出現させる
+    // 起動時に3体出す
     window.onload = () => {
         for(let i=0; i<3; i++) {
-            setTimeout(spawnMonster, i * 500);
+            setTimeout(spawnMonster, i * 800);
         }
     };
 </script>
