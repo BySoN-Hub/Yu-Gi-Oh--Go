@@ -5,90 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yu-Gi-Oh! GO</title>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #000; color: white; overflow: hidden; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #000; color: white; overflow: hidden; }
+        
+        /* サイバーマップ背景 */
         #map-container { 
             width: 100vw; height: 100vh; 
-            background: radial-gradient(circle, #1e2a4a, #050510);
+            background: radial-gradient(circle at 50% 50%, #0d1b2a 0%, #000 100%);
             background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.2) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 255, 0.2) 1px, transparent 1px);
-            background-size: 50px 50px;
+                linear-gradient(rgba(0, 255, 255, 0.1) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 2px, transparent 2px);
+            background-size: 80px 80px;
             position: relative; 
         }
+
+        /* モンスターの見た目（もっとカードらしく） */
         .monster-icon {
             position: absolute; width: 100px; height: 145px;
-            cursor: pointer; border: 2px solid gold; border-radius: 5px;
-            background: #222; z-index: 999;
-            box-shadow: 0 0 20px gold;
+            cursor: pointer; border: 2px solid #ffd700; border-radius: 5px;
+            background: #111; z-index: 100;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.7);
+            transition: all 0.3s ease;
         }
+        .monster-icon:hover { transform: scale(1.2) rotate(5deg); filter: brightness(1.3); }
+
         #status-msg { 
             position: absolute; top: 20px; width: 100%; text-align: center;
-            color: cyan; font-weight: bold; z-index: 1000;
+            color: #00ffff; font-weight: bold; font-size: 1.2rem;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8); z-index: 500;
         }
+
+        /* 捕獲（封印）画面 */
         #capture-screen {
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background:rgba(0,0,0,0.9); display:none; flex-direction:column;
-            align-items:center; justify-content:center; z-index: 2000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); display: none;
+            flex-direction: column; align-items: center; justify-content: center; z-index: 2000;
+        }
+
+        #monster-art { width: 260px; border: 4px solid #ffd700; border-radius: 12px; margin-bottom: 20px; }
+        
+        button {
+            padding: 15px 35px; font-size: 1.2rem; background: #c0392b; color: white;
+            border: none; border-radius: 50px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 5px 20px rgba(192, 57, 43, 0.5);
         }
     </style>
 </head>
 <body>
 
-<div id="status-msg">システム再起動中...</div>
+<div id="status-msg">デュエル・スキャナー：周囲を索敵中...</div>
 <div id="map-container"></div>
 
 <div id="capture-screen">
     <h2 id="m-name"></h2>
-    <img id="monster-art" src="" style="width:250px; border:2px solid gold;">
-    <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px;">封印して戻る</button>
+    <img id="monster-art" src="">
+    <button onclick="captureMonster()">カードへ封印する</button>
 </div>
 
 <script>
     const map = document.getElementById('map-container');
     const statusMsg = document.getElementById('status-msg');
+    let currentMonster = null;
 
-    // 1. まずは「青眼の白龍」を確実に1体出す（APIが死んでても出るように）
-    function spawnStaticMonster() {
-        const card = {
-            name: "青眼の白龍",
-            image: "https://images.ygoprodeck.com/images/cards/89631139.jpg"
-        };
-        createIcon(card);
-        statusMsg.innerText = "ターゲット捕捉！（固定データ）";
+    // API制限を回避するための中継プロキシを利用
+    const PROXY = "https://api.allorigins.win/raw?url=";
+    const API_URL = encodeURIComponent("https://db.ygoprodeck.com/api/v7/randomcard.php");
+
+    async function spawnMonster() {
+        try {
+            // プロキシ経由でランダムカードを取得
+            const res = await fetch(PROXY + API_URL);
+            const data = await res.json();
+            
+            if (data.card_images) {
+                createIcon(data);
+                statusMsg.innerText = "ターゲット捕捉！";
+            } else {
+                spawnMonster(); // モンスター以外なら再試行
+            }
+        } catch (e) {
+            console.error("APIエラーにつき、予備データを配置します");
+            // APIがダメな場合のバックアップ
+            createIcon({
+                name: "青眼の白龍",
+                card_images: [{ image_url: "https://images.ygoprodeck.com/images/cards/89631139.jpg" }]
+            });
+        }
     }
 
-    // 2. アイコンを画面に作る
     function createIcon(card) {
         const icon = document.createElement('img');
-        icon.src = card.image;
+        icon.src = card.card_images[0].image_url;
         icon.className = 'monster-icon';
-        icon.style.left = "40%";
-        icon.style.top = "40%";
+        
+        // 画面内のランダムな位置
+        icon.style.left = (15 + Math.random() * 60) + "%";
+        icon.style.top = (15 + Math.random() * 60) + "%";
+        
         icon.onclick = () => {
+            currentMonster = card;
             document.getElementById('m-name').innerText = card.name;
-            document.getElementById('monster-art').src = card.image;
+            document.getElementById('monster-art').src = card.card_images[0].image_url;
             document.getElementById('capture-screen').style.display = 'flex';
         };
         map.appendChild(icon);
     }
 
-    // 起動時に実行
+    function captureMonster() {
+        alert(`封印成功！ ${currentMonster.name} をデッキに加えた！`);
+        // ここにデッキ保存処理を後で追加
+        location.reload(); 
+    }
+
+    // 起動時に3体ほど出現させる
     window.onload = () => {
-        spawnStaticMonster();
-        // ここでAPIからも呼んでみる
-        fetch('https://db.ygoprodeck.com/api/v7/randomcard.php')
-            .then(res => res.json())
-            .then(data => {
-                const newCard = {
-                    name: data.name,
-                    image: data.card_images[0].image_url
-                };
-                createIcon(newCard);
-                statusMsg.innerText = "さらにモンスターを検知！";
-            })
-            .catch(err => {
-                console.log("APIは失敗しましたが、固定キャラは出ているはずです");
-            });
+        for(let i=0; i<3; i++) {
+            setTimeout(spawnMonster, i * 1000);
+        }
     };
 </script>
 </body>
