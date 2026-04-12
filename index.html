@@ -12,7 +12,7 @@
         #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); font-size: 10px; color: var(--gold); z-index: 2000000; padding: 2px 5px; border-radius: 3px; pointer-events: none; border: 1px solid rgba(255,215,0,0.3); }
 
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; }
-        .mon-chip { border: 2px solid var(--gold); border-radius: 4px; object-fit: cover; background: #000; }
+        .mon-chip { border: 2px solid var(--gold); border-radius: 4px; object-fit: cover; background: #000; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
         .lv-badge { position: absolute; top: -5px; right: -5px; background: #000; color: var(--gold); border: 1px solid var(--gold); font-size: 10px; padding: 1px 3px; border-radius: 3px; font-weight: bold; z-index: 10; }
         .ui-btn { position: fixed; width: 60px; height: 60px; background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); z-index: 1000; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 10px var(--gold); }
         #deck-btn-ui { bottom: 40px; left: 20px; }
@@ -39,7 +39,16 @@
         .status-ui { width: 125px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-        #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); background-size: cover; background-position: center; border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
+
+        /* --- 封印エフェクト：相手カードに完全同期 --- */
+        #seal-base-card { 
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%; /* コンテナいっぱいに広げる */
+            background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); 
+            background-size: 100% 100%; /* 縦横比をコンテナ（＝相手カード）に強制的に合わせる */
+            background-position: center; 
+            border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; box-shadow: 0 0 30px var(--fusion); pointer-events: none; 
+        }
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; transform: translate(-50%, -50%); display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; box-shadow: 0 0 100px var(--fusion); }
         @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
@@ -47,11 +56,11 @@
 
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
-        .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
+        .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 20px; }
         .card-box { aspect-ratio: 1 / 1.45; border: 1px solid #444; background: #111; text-align: center; position: relative; overflow: hidden; border-radius: 4px; }
         .card-box.selected { border: 2px solid var(--gold); background: rgba(255,215,0,0.15); box-shadow: 0 0 10px var(--gold); }
         .card-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .stock-badge { position: absolute; bottom: 4px; right: 4px; background: var(--red); color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; font-weight: bold; z-index: 5; }
+        .stock-badge { position: absolute; bottom: 4px; right: 4px; background: var(--red); color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; font-weight: bold; z-index: 5; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
         #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         #msg-window { height: 50px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; text-align: center; z-index: 9100; }
         #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 15px 30px 15px; background: #222; z-index: 9100; }
@@ -61,7 +70,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.1.0</div>
+<div id="version-tag">Ver 1.1.1</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
@@ -139,7 +148,7 @@
         audio.play().catch(e => console.log("Audio play blocked."));
     }
 
-    const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
+    const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}, {name:"カオス・ソルジャー", id:54056941, atk:3000}, {name:"ハーピィ・レディ三姉妹", id:12206212, atk:1950}, {name:"暗黒騎士ガイア", id:6368038, atk:2300}];
 
     function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); playRandomBGM(); }
 
@@ -152,13 +161,16 @@
         });
     }
 
+    // --- モンスター大量発生モード ---
     function spawn(lat, lon) {
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
-        for(let i=0; i<12; i++) {
+        // 出現数を大幅アップ (12体 -> 50体)
+        for(let i=0; i<50; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
-            let lv = Math.floor(Math.random()*3)+1;
+            let lv = Math.floor(Math.random()*4)+1; // Lv1~4
             const icon = L.divIcon({ className: 'mon-container', html: `<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
-            let marker = L.marker([lat+(Math.random()-0.5)*0.008, lon+(Math.random()-0.5)*0.008], {icon: icon}).addTo(map);
+            // 出現範囲も少し広げる
+            let marker = L.marker([lat+(Math.random()-0.5)*0.012, lon+(Math.random()-0.5)*0.012], {icon: icon}).addTo(map);
             marker.on('click', () => {
                 bData.e = { name: m.name, id: m.id, atk: m.atk * lv, hp: m.atk * lv, max: m.atk * lv, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
                 bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
@@ -229,7 +241,6 @@
         document.getElementById('main-mon-stat').innerText = `Lv.${mainLv} ATK:${main.atk}`;
         const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
         myDeck.forEach((m, i) => {
-            // インデックスに関わらず全て描画（1枚目は表示上スキップしたい場合は条件追加も可能ですが、強化素材にするために表示）
             grid.innerHTML += `<div class="card-box ${selectedIdx === i ? 'selected' : ''}" onclick="selectedIdx=${i};renderDeck();">
                 ${m.count > 1 ? `<div class="stock-badge">×${m.count}</div>` : ''}
                 <img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg"></div>`;
@@ -242,14 +253,10 @@
     }
     function executeEnhance() {
         if(selectedIdx === -1) return;
-        // 同種カードでも自分自身を素材にはできない（枚数が1枚なら不可、2枚以上なら1枚減らす）
         if(selectedIdx === 0 && myDeck[0].count <= 1) { alert("メインモンスターを素材にはできません"); return; }
         myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.1);
-        myDeck[selectedIdx].count--; 
-        if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
-        localStorage.setItem('myDeck', JSON.stringify(myDeck)); 
-        selectedIdx = -1; 
-        renderDeck();
+        myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
+        localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
     }
     function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
     function finishSeal() { document.getElementById('success-pop').style.display = 'none'; if(currentMarker) map.removeLayer(currentMarker); closeBattleUI(); }
