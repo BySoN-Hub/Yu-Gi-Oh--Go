@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ポケモンGoGo - Logic & Master Fixed</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; background: #222; -webkit-user-select: none; }
+        #map { position: absolute; top: 0; width: 100%; height: 100%; z-index: 1; }
+        #tap-to-start { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: #000; color: #ffcb05; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; cursor: pointer; text-align: center; flex-direction: column; }
+        
+        #home-screen { position: absolute; top: 0; width: 100%; height: 100%; z-index: 1000; background-position: center; background-size: cover; display: none; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        .moving-pokemon { position: absolute; width: 80px; height: 80px; transition: all 3s ease-in-out; filter: drop-shadow(2px 2px 5px rgba(0,0,0,0.5)); }
+        .start-btn { padding: 15px 50px; font-size: 24px; font-weight: bold; color: white; background: #3b4cca; border: 4px solid #ffcb05; border-radius: 50px; cursor: pointer; z-index: 1001; }
+        
+        #catch-screen { position: absolute; top: 0; width: 100%; height: 100%; z-index: 100; display: none; background-position: center; background-size: cover; overflow: hidden; }
+        #three-canvas { position: absolute; top: 0; width: 100%; height: 100%; z-index: 1; }
+        #back-btn { position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.85); border: 2px solid #3b4cca; padding: 4px 10px; border-radius: 12px; font-weight: bold; z-index: 500; font-size: 11px; color: #333; }
+        
+        .status-ui { position: fixed; top: 22px; left: 50%; transform: translateX(-50%); background: rgba(255,255,255,0.95); padding: 6px 12px; border-radius: 20px; border: 2.5px solid #3b4cca; font-weight: bold; text-align: center; min-width: 240px; z-index: 400; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); pointer-events: none; }
+        #next-goal-hint { font-size: 9.5px; color: #ff4500; margin-top: 2px; display: block; font-weight: bold; }
+
+        #side-ball-container { position: fixed; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 600; }
+        .side-ball-opt { position: relative; display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.7); border-radius: 12px; padding: 5px; border: 2px solid #3b4cca; transition: 0.2s; }
+        .side-ball-opt.active { background: #ffcb05; transform: scale(1.05); border-color: white; }
+        .side-ball-opt img { width: 34px; height: 34px; }
+        .ball-info { font-size: 9px; font-weight: bold; margin-top: 2px; display: flex; flex-direction: column; align-items: center; }
+        .ui-disabled { pointer-events: none; opacity: 0.5; filter: grayscale(0.5); }
+
+        #catch-comment { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); width: 85%; text-align: center; font-size: 17px; font-weight: bold; color: white; text-shadow: 2px 2px 4px #000; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 15px; z-index: 310; display: none; pointer-events: none; }
+        #kachi-effect { position: absolute; top: 52%; left: 50%; transform: translateX(-50%); font-size: 18px; color: #ffcb05; font-weight: bold; text-shadow: 1px 1px 2px #000; display: none; z-index: 320; pointer-events: none; }
+        
+        #ball { position: absolute; width: 95px; height: 95px; z-index: 300; display: none; touch-action: none; bottom: 20px; left: 50%; transform: translateX(-50%); }
+        .ball-gray { filter: grayscale(1) brightness(0.7) !important; }
+        @keyframes wiggle { 0% { transform: translateX(-50%) rotate(0deg); } 25% { transform: translateX(-50%) rotate(-15deg); } 75% { transform: translateX(-50%) rotate(15deg); } 100% { transform: translateX(-50%) rotate(0deg); } }
+        .ball-wiggle { animation: wiggle 0.5s ease-in-out; }
+
+        .ui-fixed { position: fixed; bottom: 25px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; z-index: 500; pointer-events: none; }
+        .ui-btn { background: white; border: 4px solid #3b4cca; border-radius: 50%; width: 68px; height: 68px; pointer-events: auto; font-size: 13px; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; text-align: center; }
+        
+        #pokedex-panel { display: none; position: fixed; top: 5%; left: 5%; width: 90%; height: 85%; background: #f8f8f8; z-index: 2000; border-radius: 25px; padding: 20px; border: 6px solid #ffcb05; box-sizing: border-box; overflow-y: auto; }
+        #pokedex-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .pokedex-counter-cell { background: white; border-radius: 15px; padding: 10px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px solid #3b4cca; font-weight: bold; color: #333; font-size: 11px; min-height: 100px; }
+        .pokedex-counter-cell span { font-size: 18px; color: #3b4cca; display: block; margin-top: 5px; }
+
+        .map-pokemon-icon { position: relative; width: 75px; height: 75px; }
+        .map-pokemon-img { width: 100%; height: 100%; }
+        .map-caught { filter: grayscale(1) opacity(0.7); }
+        .map-shiny-star { position: absolute; top: 0; right: 0; font-size: 14px; text-shadow: 1px 1px 2px white; }
+
+        #pokemon-detail-card { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; background: white; z-index: 2100; border-radius: 30px; padding: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.6); text-align: center; border: 5px solid #3b4cca; }
+        .type-badge { display: inline-block; padding: 4px 10px; border-radius: 15px; color: white; font-size: 12px; font-weight: bold; margin: 3px; }
+        .detail-no-badge { background: #3b4cca; color: white; padding: 2px 12px; border-radius: 10px; font-size: 18px; margin-bottom: 5px; display: inline-block; }
+    </style>
+</head>
+<body onclick="initSystem()">
+
+    <div id="tap-to-start">タップして開始</div>
+
+    <div id="home-screen">
+        <h1 style="color:#ffcb05; text-shadow: 3px 3px #3b4cca; font-size: 48px; margin-bottom: 20px; z-index: 1001;">ポケモンGoGo</h1>
+        <div style="color:white; font-weight:bold; margin-bottom:20px; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:20px; z-index: 1001;" id="home-lv">Lv.1</div>
+        <button class="start-btn" onclick="startGame()">はじめる</button>
+        <div id="home-pokemon-container"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="status-ui">
+        <span id="player-status-text">Lv.1 | XP: 0 / 100</span>
+        <span id="next-goal-hint">Lv3でポケストップからスーパーボールGET</span>
+    </div>
+
+    <div id="catch-screen">
+        <div id="back-btn" onclick="backToMap()">にげる</div>
+        <div id="catch-comment"></div>
+        <div id="kachi-effect">カチッ！✨★</div>
+        <div id="three-canvas"></div>
+    </div>
+
+    <div id="side-ball-container">
+        <div class="side-ball-opt active" id="side-poke" onclick="selectBall('poke')">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png">
+            <div class="ball-info"><span id="side-count-poke">0</span><span style="color:#ff4500; font-weight:bold;">60%</span></div>
+        </div>
+        <div class="side-ball-opt" id="side-great" onclick="selectBall('great')">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png">
+            <div class="ball-info"><span id="side-count-great">0</span><span style="color:#ff4500; font-weight:bold;">70%</span></div>
+        </div>
+        <div class="side-ball-opt" id="side-ultra" onclick="selectBall('ultra')">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png">
+            <div class="ball-info"><span id="side-count-ultra">0</span><span style="color:#ff4500; font-weight:bold;">80%</span></div>
+        </div>
+        <div class="side-ball-opt" id="side-master" onclick="selectBall('master')">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png">
+            <div class="ball-info"><span id="side-count-master">0</span><span style="color:#9c27b0; font-weight:bold;">100%</span></div>
+        </div>
+    </div>
+
+    <div class="ui-fixed">
+        <button class="ui-btn" style="background:#3b4cca; color:white;" onclick="togglePokedex()">図鑑</button>
+        <button id="loc-btn" class="ui-btn" style="background:#ffcb05; color:#3b4cca; font-size: 24px;" onclick="refreshToCurrentLocation()">📍</button>
+    </div>
+    <img id="ball" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png">
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script type="importmap"> { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } } </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        let scene, camera, renderer, pokemonSprite, isCatchMode = false, isThrowing = false, currentId, currentJpName, isShiny = false;
+        let caughtList = JSON.parse(localStorage.getItem('pokedex_v2') || '[]');
+        
+        // データの不整合を防ぐため、既に保存されているデータがある場合はそれを、ない場合は初期値を設定
+        let playerState = JSON.parse(localStorage.getItem('player_state') || '{"lv":1, "xp":0, "balls":{"poke":40, "great":30, "ultra":20, "master":1}}');
+        // もし古い保存データでmasterがない場合に備えて追加
+        if(!playerState.balls.master && playerState.balls.master !== 0) playerState.balls.master = 1;
+
+        let isStarted = false, isDragging = false, startX, startY;
+
+        const themeFiles = ['theme.mp3', 'theme2.mp3', 'theme3.mp3'];
+        let bgmMain;
+        const bgmBattle = new Audio('battle.mp3'); bgmBattle.loop = true; bgmBattle.volume = 0.4;
+        const fanfare = new Audio('fanfare.mp3'); fanfare.volume = 0.5;
+        const ballImg = { 
+            poke: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png', 
+            great: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png', 
+            ultra: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png',
+            master: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png'
+        };
+        
+        const ballRates = { poke: 0.60, great: 0.70, ultra: 0.80, master: 1.0 };
+        let selectedType = 'poke';
+
+        window.initSystem = function() {
+            if (isStarted) return;
+            isStarted = true;
+            document.getElementById('tap-to-start').style.display = 'none';
+            document.getElementById('home-screen').style.display = 'flex';
+            document.getElementById('home-lv').innerText = `Lv.${playerState.lv}`;
+            const randomTheme = themeFiles[Math.floor(Math.random() * themeFiles.length)];
+            bgmMain = new Audio(randomTheme); bgmMain.loop = true; bgmMain.volume = 0.4;
+            updateUI();
+            [bgmMain, bgmBattle, fanfare].forEach(a => { a.load(); a.play().then(()=>a.pause()); });
+            initHome();
+            refreshToCurrentLocation();
+        };
+
+        window.startGame = function() { document.getElementById('home-screen').style.display = 'none'; bgmMain.play(); };
+
+        function initHome() {
+            const landscapes = ['https://images.unsplash.com/photo-1507041957456-9c397ce39c97?w=1600','https://images.unsplash.com/photo-1542296332-2e4473faf563?w=1600'];
+            document.getElementById('home-screen').style.backgroundImage = `url(${landscapes[Math.floor(Math.random()*landscapes.length)]})`;
+            const container = document.getElementById('home-pokemon-container');
+            container.innerHTML = '';
+            for(let i=0; i<5; i++){
+                const id = Math.floor(Math.random()*151)+1;
+                const img = document.createElement('img');
+                img.className = 'moving-pokemon';
+                img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+                setRandomPos(img); container.appendChild(img);
+                setInterval(() => setRandomPos(img), 3000);
+            }
+        }
+        function setRandomPos(el) { el.style.left = Math.random() * 80 + '%'; el.style.top = Math.random() * 70 + 10 + '%'; }
+
+        const map = L.map('map', { zoomControl: false }).setView([35.6812, 139.7671], 18);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const objectLayer = L.layerGroup().addTo(map);
+
+        window.refreshToCurrentLocation = function() { map.locate({setView: true, maxZoom: 18}); };
+        map.on('locationfound', () => spawnObjects());
+        map.on('locationerror', () => spawnObjects());
+
+        function spawnObjects() {
+            objectLayer.clearLayers();
+            const c = map.getCenter();
+            for(let i=0; i<15; i++){
+                const id = Math.floor(Math.random()*151)+1;
+                const isCaught = caughtList.some(p => p.id === id);
+                const isMapShiny = (!isCaught && Math.random() < (1/150));
+                const pos = [c.lat + (Math.random()-0.5)*0.01, c.lng + (Math.random()-0.5)*0.01];
+                const imgUrl = isMapShiny ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png` : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+                const iconHtml = `<div class="map-pokemon-icon"><img src="${imgUrl}" class="map-pokemon-img ${isCaught ? 'map-caught' : ''}">${isMapShiny ? '<span class="map-shiny-star">✨</span>' : ''}</div>`;
+                const icon = L.divIcon({ html: iconHtml, className: '', iconSize:[75,75], iconAnchor:[37,37] });
+                L.marker(pos, {icon}).addTo(objectLayer).on('click', () => switchToCatchMode(id, isMapShiny));
+            }
+            for(let i=0; i<4; i++){
+                const pos = [c.lat + (Math.random()-0.5)*0.01, c.lng + (Math.random()-0.5)*0.01];
+                const icon = L.divIcon({ html: `<div style="width:30px;height:30px;background:white;border:4px solid #3b4cca;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px #3b4cca;font-size:18px;">🎁</div>`, className: '', iconSize:[30,30] });
+                L.marker(pos, {icon}).addTo(objectLayer).on('click', (e) => {
+                    const startRect = e.originalEvent.target.getBoundingClientRect();
+                    const rewards = [];
+                    for(let j=0; j< (3+Math.floor(Math.random()*3)); j++){
+                        const rand = Math.random();
+                        let type = 'poke';
+                        if(Math.random() < (1/200)) type = 'master'; // マスターボール 1/200
+                        else if(playerState.lv >= 5 && rand < 0.15) type = 'ultra';
+                        else if(playerState.lv >= 3 && rand < 0.35) type = 'great';
+                        rewards.push(type);
+                    }
+                    rewards.forEach((type, idx) => {
+                        setTimeout(() => {
+                            playerState.balls[type]++;
+                            const fly = document.createElement('img'); fly.src = ballImg[type]; fly.style = `position:fixed;width:30px;height:30px;z-index:1000;left:${startRect.left}px;top:${startRect.top}px;transition:all 0.8s;pointer-events:none;`;
+                            document.body.appendChild(fly);
+                            const target = document.getElementById('side-'+type).getBoundingClientRect();
+                            requestAnimationFrame(() => { fly.style.left = target.left+'px'; fly.style.top = target.top+'px'; fly.style.transform = 'scale(0.5)'; fly.style.opacity = '0.5'; });
+                            setTimeout(() => fly.remove(), 800);
+                            updateUI();
+                        }, idx * 150);
+                    });
+                    e.target.remove();
+                });
+            }
+        }
+
+        map.on('moveend', () => { if(!isCatchMode) spawnObjects(); });
+
+        async function switchToCatchMode(id, mapShiny) {
+            isCatchMode = true; isThrowing = false; currentId = id; isShiny = mapShiny;
+            bgmMain.pause(); bgmBattle.currentTime = 0; bgmBattle.play();
+            document.getElementById('map').style.display = 'none';
+            document.getElementById('catch-screen').style.display = 'block';
+            document.getElementById('side-ball-container').classList.remove('ui-disabled');
+            updateUI(); 
+            const res = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`);
+            const data = await res.json();
+            currentJpName = data.names.find(n => n.language.name === 'ja').name;
+            const comm = document.getElementById('catch-comment');
+            comm.innerText = (isShiny ? "✨色違いの " : "野生の ") + `${currentJpName} が現れた！`; comm.style.display = 'block';
+            setTimeout(() => { if(isCatchMode && comm.innerText.includes('現れた')) comm.style.display = 'none'; }, 2000);
+            
+            const landscapes = ['https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=1200','https://images.unsplash.com/photo-1440613905118-99b921706b5c?w=1200','https://images.unsplash.com/photo-1473448912268-2022ce9509d8?w=1200'];
+            document.getElementById('catch-screen').style.backgroundImage = `url(${landscapes[Math.floor(Math.random()*landscapes.length)]})`;
+
+            const container = document.getElementById('three-canvas'); container.innerHTML = '';
+            scene = new THREE.Scene(); camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000); camera.position.z = 5;
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); container.appendChild(renderer.domElement);
+            const spriteUrl = isShiny ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png` : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+            const tex = new THREE.TextureLoader().load(spriteUrl);
+            pokemonSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex })); 
+            pokemonSprite.scale.set(3.0, 3.0, 1);
+            scene.add(pokemonSprite);
+            resetBall();
+            const anim = () => { if(isCatchMode) { requestAnimationFrame(anim); renderer.render(scene, camera); } }; anim();
+        }
+
+        function resetBall() {
+            const b = document.getElementById('ball');
+            b.style.display = isCatchMode ? 'block' : 'none';
+            b.style.transition = 'none'; b.style.bottom = '20px'; b.style.top = 'auto';
+            b.style.left = '50%'; b.style.transform = 'translateX(-50%)';
+            b.style.width = '95px'; b.style.height = '95px';
+            b.src = ballImg[selectedType]; b.classList.remove('ball-wiggle', 'ball-gray');
+            isThrowing = false;
+            document.getElementById('side-ball-container').classList.remove('ui-disabled');
+            updateUI();
+        }
+
+        window.selectBall = (t) => { 
+            if(isThrowing) return;
+            selectedType = t; resetBall(); 
+            document.querySelectorAll('.side-ball-opt').forEach(el => el.classList.toggle('active', el.id === 'side-'+t)); 
+        };
+
+        const b = document.getElementById('ball');
+        b.addEventListener('touchstart', e => { if(!isCatchMode || isThrowing || playerState.balls[selectedType] <= 0) return; isDragging = true; startX = e.touches[0].clientX; startY = e.touches[0].clientY; });
+        b.addEventListener('touchmove', e => { if(!isDragging) return; const t = e.touches[0]; b.style.left = t.clientX + 'px'; b.style.top = t.clientY + 'px'; });
+        b.addEventListener('touchend', e => {
+            if(!isDragging) return; isDragging = false;
+            const distY = startY - e.changedTouches[0].clientY;
+            if(distY > 80) {
+                isThrowing = true;
+                document.getElementById('side-ball-container').classList.add('ui-disabled');
+                
+                // ここで個数を消費
+                playerState.balls[selectedType]--; 
+                updateUI();
+                
+                b.style.transition = `all 0.8s ease-in-out`; b.style.top = '50%'; b.style.left = '50%'; b.style.width = '75px'; b.style.height = '75px';
+                setTimeout(() => {
+                    pokemonSprite.visible = false; b.style.transition = 'none'; b.style.top = '55%';
+                    let wiggles = 0;
+                    const wiggleInterval = setInterval(() => {
+                        wiggles++; b.classList.add('ball-wiggle'); setTimeout(() => b.classList.remove('ball-wiggle'), 500);
+                        if(wiggles === 3) { clearInterval(wiggleInterval); setTimeout(judgeCatch, 600); }
+                    }, 1000);
+                }, 800);
+            } else { resetBall(); }
+        });
+
+        function judgeCatch() {
+            const comm = document.getElementById('catch-comment');
+            const kachi = document.getElementById('kachi-effect');
+            if(Math.random() < ballRates[selectedType]) {
+                b.classList.add('ball-gray'); kachi.style.display = 'block';
+                comm.innerText = `${currentJpName} ゲットだぜ！`; comm.style.display = 'block';
+                bgmBattle.pause(); fanfare.currentTime = 0; fanfare.play();
+                playerState.xp += 50; if(playerState.xp >= playerState.lv * 100) { playerState.xp = 0; playerState.lv++; }
+                if(!caughtList.find(p => p.id === currentId)) {
+                    caughtList.push({ id: currentId, name: currentJpName, shiny: isShiny }); localStorage.setItem('pokedex_v2', JSON.stringify(caughtList));
+                }
+                updateUI(); setTimeout(backToMap, 4000);
+            } else {
+                comm.innerText = "あぁっ！ボールから出てしまった"; comm.style.display = 'block';
+                setTimeout(() => { if(isCatchMode) { comm.style.display = 'none'; pokemonSprite.visible = true; resetBall(); } }, 1500);
+            }
+        }
+
+        window.backToMap = () => {
+            isCatchMode = false; isThrowing = false;
+            bgmBattle.pause(); fanfare.pause(); bgmMain.play();
+            document.getElementById('map').style.display = 'block';
+            document.getElementById('catch-screen').style.display = 'none';
+            document.getElementById('kachi-effect').style.display = 'none';
+            document.getElementById('catch-comment').style.display = 'none';
+            resetBall();
+        };
+
+        function updateUI() {
+            const nextXP = playerState.lv * 100;
+            document.getElementById('player-status-text').innerText = `Lv.${playerState.lv} | XP: ${playerState.xp} / ${nextXP}`;
+            const goalHint = document.getElementById('next-goal-hint');
+            if (playerState.lv < 3) goalHint.innerText = "Lv3でポケストップからスーパーボールGET";
+            else if (playerState.lv < 5) goalHint.innerText = "Lv5でポケストップからハイパーボールGET";
+            else goalHint.innerText = "最強のポケモントレーナー！";
+
+            document.getElementById('side-count-poke').innerText = playerState.balls.poke;
+            document.getElementById('side-count-great').innerText = playerState.balls.great;
+            document.getElementById('side-count-ultra').innerText = playerState.balls.ultra;
+            document.getElementById('side-count-master').innerText = playerState.balls.master; // ここを修正 (固定値からplayerState参照へ)
+            localStorage.setItem('player_state', JSON.stringify(playerState));
+        }
+
+        window.togglePokedex = () => {
+            const p = document.getElementById('pokedex-panel'); const isOpening = p.style.display !== 'block';
+            p.style.display = isOpening ? 'block' : 'none';
+            if(isOpening) {
+                const count = caughtList.length;
+                document.getElementById('pokedex-list').innerHTML = `<div class="pokedex-counter-cell" style="grid-column: 1 / span 3; min-height: 50px; flex-direction: row; gap: 10px;">捕獲数： <span>${count} / 151</span>匹</div>` + caughtList.sort((a,b)=>a.id-b.id).map(p => {
+                    const no = String(p.id).padStart(3,'0');
+                    return `<div style="background:white; border-radius:15px; padding:10px; text-align:center; position:relative; border:2px solid #ccc;" onclick="showDetail(${p.id}, ${p.shiny})"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.shiny?'shiny/':''}${p.id}.png" width="70"><div style="font-size:10px; color:#666; font-weight:bold;">No.${no}</div></div>`;
+                }).join('');
+            }
+        };
+
+        window.showDetail = async (id, shiny) => {
+            const [res, resSpec] = await Promise.all([fetch(`https://pokeapi.co/api/v2/pokemon/${id}`), fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`)]);
+            const [data, dataSpec] = await Promise.all([res.json(), resSpec.json()]);
+            const typeColors = { grass:'#7AC74C', fire:'#EE8130', water:'#6390F0', bug:'#A6B91A', normal:'#A8A77A', poison:'#A33EA1', electric:'#F7D02C', ground:'#E2BF65', fairy:'#D685AD', fighting:'#C22E28', psychic:'#F95587', rock:'#B6A136', ghost:'#735797', ice:'#96D9D6', dragon:'#6F35FC', dark:'#705746', steel:'#B7B7CE', flying:'#A98FF3' };
+            const typeMap = { grass:'くさ', fire:'ほのお', water:'みず', bug:'むし', normal:'ノーマル', poison:'どく', electric:'でんき', ground:'じめん', fairy:'フェアリー', fighting:'かくとう', psychic:'エスパー', rock:'いわ', ghost:'ゴースト', ice:'こおり', dragon:'ドラゴン', dark:'あく', steel:'はがね', flying:'ひこう' };
+            const no = String(id).padStart(3,'0');
+            const card = document.getElementById('pokemon-detail-card');
+            card.innerHTML = `
+                <div class="detail-no-badge">No.${no}</div>
+                <img src="${data.sprites.other['official-artwork'][shiny ? 'front_shiny' : 'front_default']}" style="width:160px; height:160px;">
+                <h2 style="margin:10px 0; font-size:26px;">${(shiny ? "✨" : "") + dataSpec.names.find(n => n.language.name === 'ja').name}</h2>
+                <div>${data.types.map(t => `<span class="type-badge" style="background:${typeColors[t.type.name]}">${typeMap[t.type.name]}</span>`).join('')}</div>
+                <div style="margin-top:15px; font-size:14px; color:#666;">たかさ: ${data.height/10}m / おもさ: ${data.weight/10}kg</div>
+                <button onclick="closeDetail()" style="margin-top:25px; padding:10px 40px; border-radius:30px; border:3px solid #3b4cca; background:white; font-weight:bold;">閉じる</button>
+            `;
+            card.style.display = 'block';
+            new Audio(`https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${id}.ogg`).play().catch(()=>{});
+        };
+        window.closeDetail = () => document.getElementById('pokemon-detail-card').style.display = 'none';
+    </script>
+    
+    <div id="pokedex-panel">
+        <h2 style="margin:0; margin-bottom:10px;">ポケモン図鑑</h2>
+        <div id="pokedex-list"></div>
+        <button onclick="togglePokedex()" style="width:100%; margin-top:20px; padding:15px; background:#3b4cca; color:white; border-radius:15px; font-weight:bold; border:none;">閉じる</button>
+    </div>
+
+    <div id="pokemon-detail-card"></div>
+</body>
+</html>
