@@ -24,50 +24,51 @@
         .top-card-img { width: 100px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
         .start-btn { padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; }
 
-        /* --- バトル画面：カードを中心へ移動 --- */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
         .battle-stage { flex: 1; position: relative; padding: 20px 0; }
         .m-row { position: absolute; width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; justify-content: center; gap: 10px; }
-        
-        /* 相手：中央配置 */
         .m-row.wild { top: 10dvh; }
-        /* 自分：中央配置 */
         .m-row.player { top: 40dvh; }
-
         .battle-img-container { height: 100%; width: 45%; position: relative; display: flex; align-items: center; justify-content: center; }
         .battle-img { height: 100%; width: auto; max-width: 100%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; transition: transform 1s, opacity 1s; }
-        
         .status-ui { width: 125px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-
-        /* 封印エフェクト */
         #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); background-size: cover; background-position: center; border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; transform: translate(-50%, -50%); display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; box-shadow: 0 0 100px var(--fusion); }
         @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
         .sucking { transform: scale(0) rotate(360deg) !important; opacity: 0 !important; }
 
+        /* --- デッキ画面：枠の最適化 --- */
+        #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
+        .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
+        .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 20px; }
+        
+        /* 控えカード枠をイラストにピッタリ合わせる */
+        .card-box { 
+            aspect-ratio: 1 / 1.45; /* 公式カードの比率に固定 */
+            border: 1px solid #444; 
+            background: #111; 
+            text-align: center; 
+            position: relative; 
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .card-box.selected { border: 2px solid var(--gold); background: rgba(255,215,0,0.15); box-shadow: 0 0 10px var(--gold); }
+        .card-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        
+        .stock-badge { position: absolute; bottom: 4px; right: 4px; background: var(--red); color: white; font-size: 10px; padding: 1px 5px; border-radius: 10px; font-weight: bold; z-index: 5; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
+        #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         #msg-window { height: 50px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; text-align: center; z-index: 9100; }
         #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 15px 30px 15px; background: #222; z-index: 9100; }
         .cmd-btn { background: #eee; border: 2px solid #888; border-radius: 8px; font-weight: bold; font-size: 16px; }
         .btn-chance { animation: blink-btn 0.6s infinite alternate; border: 3px solid #ff8c00 !important; background: #fff !important; color: #ff8c00 !important; }
-        @keyframes blink-btn { from { opacity: 1; transform: scale(1); } to { opacity: 0.7; transform: scale(1.05); } }
-
-        /* デッキ画面 */
-        #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
-        .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
-        .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
-        .card-box { border: 1px solid #444; padding: 5px; background: #111; text-align: center; position: relative; }
-        .card-box img { width: 100%; }
-        .stock-badge { position: absolute; bottom: 2px; right: 2px; background: var(--red); color: white; font-size: 10px; padding: 1px 4px; border-radius: 10px; font-weight: bold; z-index: 5; }
-        #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
     </style>
 </head>
 <body>
 
-<div id="version-tag">Ver 1.0.6</div>
-
+<div id="version-tag">Ver 1.0.7</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
@@ -124,7 +125,7 @@
 <div id="deck-screen">
     <h3 style="text-align:center; color:var(--gold);">DUELIST DECK</h3>
     <div class="deck-header">
-        <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px; font-weight:bold;"></div></div>
+        <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px; font-weight:bold; margin-top:5px;"></div></div>
         <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">⚡ 強化</button></div>
     </div>
     <div id="deck-grid" class="deck-grid"></div>
@@ -141,18 +142,13 @@
         const audio = document.getElementById('bgm');
         const randomSong = bgmList[Math.floor(Math.random() * bgmList.length)];
         audio.src = randomSong;
-        audio.volume = 0.3; // 音量を30%に設定
+        audio.volume = 0.3;
         audio.play().catch(e => console.log("Audio play blocked."));
     }
 
     const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
 
-    function startGame() { 
-        document.getElementById('top-screen').style.display = 'none'; 
-        document.getElementById('map').style.visibility = 'visible'; 
-        initMap(); 
-        playRandomBGM(); 
-    }
+    function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); playRandomBGM(); }
 
     function initMap() {
         navigator.geolocation.getCurrentPosition(pos => {
@@ -176,7 +172,6 @@
                 currentMarker = marker;
                 document.getElementById('battle-screen').style.display = 'flex';
                 document.getElementById('w-img').classList.remove('sucking');
-                document.getElementById('seal-btn').classList.remove('btn-chance');
                 updateUI();
                 document.getElementById('msg-text').innerText = `${bData.e.name}が現れた！`;
             });
@@ -187,7 +182,8 @@
         if(!bData.e || !bData.p) return;
         const setUI = (p, d) => {
             document.getElementById(`${p}-name-label`).innerText = d.name;
-            document.getElementById(`${p}-stat-label`).innerText = `Lv.${d.level||d.lv} ATK:${d.atk}`;
+            const lvDisplay = (p === 'p') ? (Math.floor(d.atk / 1000) + 1) : (d.level || d.lv);
+            document.getElementById(`${p}-stat-label`).innerText = `Lv.${lvDisplay} ATK:${d.atk}`;
             document.getElementById(`${p}-hp-fill`).style.width = (d.hp/d.max*100) + '%';
             document.getElementById(`${p}-hp-num`).innerText = `${Math.floor(d.hp)} / ${Math.floor(d.max)}`;
             document.getElementById(`${p}-img`).src = d.img;
@@ -235,7 +231,8 @@
     function renderDeck() {
         const main = myDeck[0];
         document.getElementById('main-mon-img').src = main.img;
-        document.getElementById('main-mon-stat').innerText = `${main.name} (ATK:${main.atk})`;
+        const mainLv = Math.floor(main.atk / 1000) + 1;
+        document.getElementById('main-mon-stat').innerText = `Lv.${mainLv} ATK:${main.atk}`;
         const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
         myDeck.forEach((m, i) => {
             grid.innerHTML += `<div class="card-box ${selectedIdx === i ? 'selected' : ''}" onclick="selectedIdx=${i};renderDeck();">
@@ -249,10 +246,13 @@
         localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
     }
     function executeEnhance() {
-        if(selectedIdx <= 0) return;
+        if(selectedIdx === -1) return;
         myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.1);
-        myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
-        localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
+        myDeck[selectedIdx].count--; 
+        if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
+        localStorage.setItem('myDeck', JSON.stringify(myDeck)); 
+        selectedIdx = -1; 
+        renderDeck();
     }
     function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
     function finishSeal() { document.getElementById('success-pop').style.display = 'none'; if(currentMarker) map.removeLayer(currentMarker); closeBattleUI(); }
