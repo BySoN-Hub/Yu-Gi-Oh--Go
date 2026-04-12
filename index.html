@@ -39,16 +39,7 @@
         .status-ui { width: 125px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-
-        /* --- 封印エフェクト：相手カードに完全同期 --- */
-        #seal-base-card { 
-            position: absolute; 
-            top: 0; left: 0; width: 100%; height: 100%; /* コンテナいっぱいに広げる */
-            background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); 
-            background-size: 100% 100%; /* 縦横比をコンテナ（＝相手カード）に強制的に合わせる */
-            background-position: center; 
-            border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; box-shadow: 0 0 30px var(--fusion); pointer-events: none; 
-        }
+        #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); background-size: 100% 100%; background-position: center; border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; transform: translate(-50%, -50%); display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; box-shadow: 0 0 100px var(--fusion); }
         @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
@@ -70,7 +61,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.1.1</div>
+<div id="version-tag">Ver 1.1.2</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
@@ -148,7 +139,13 @@
         audio.play().catch(e => console.log("Audio play blocked."));
     }
 
-    const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}, {name:"カオス・ソルジャー", id:54056941, atk:3000}, {name:"ハーピィ・レディ三姉妹", id:12206212, atk:1950}, {name:"暗黒騎士ガイア", id:6368038, atk:2300}];
+    const monsterLib = [
+        {name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500},
+        {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500},
+        {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000},
+        {name:"カオス・ソルジャー", id:54056941, atk:3000}, {name:"暗黒騎士ガイア", id:6368038, atk:2300},
+        {name:"ハーピィ・レディ三姉妹", id:12206212, atk:1950}, {name:"人造人間-サイコ・ショッカー", id:77585513, atk:2400}
+    ];
 
     function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); playRandomBGM(); }
 
@@ -161,26 +158,30 @@
         });
     }
 
-    // --- モンスター大量発生モード ---
     function spawn(lat, lon) {
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
-        // 出現数を大幅アップ (12体 -> 50体)
         for(let i=0; i<50; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
-            let lv = Math.floor(Math.random()*4)+1; // Lv1~4
-            const icon = L.divIcon({ className: 'mon-container', html: `<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
-            // 出現範囲も少し広げる
-            let marker = L.marker([lat+(Math.random()-0.5)*0.012, lon+(Math.random()-0.5)*0.012], {icon: icon}).addTo(map);
-            marker.on('click', () => {
-                bData.e = { name: m.name, id: m.id, atk: m.atk * lv, hp: m.atk * lv, max: m.atk * lv, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
-                bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
-                currentMarker = marker;
-                document.getElementById('battle-screen').style.display = 'flex';
-                document.getElementById('w-img').classList.remove('sucking');
-                document.getElementById('seal-btn').classList.remove('btn-chance');
-                updateUI();
-                document.getElementById('msg-text').innerText = `${bData.e.name}が現れた！`;
-            });
+            let lv = Math.floor(Math.random()*4)+1;
+            let imgUrl = `https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg`;
+            
+            // --- 画像バグ対策ロジック ---
+            let testImg = new Image();
+            testImg.onload = function() {
+                const icon = L.divIcon({ className: 'mon-container', html: `<img src="${imgUrl}" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
+                let marker = L.marker([lat+(Math.random()-0.5)*0.012, lon+(Math.random()-0.5)*0.012], {icon: icon}).addTo(map);
+                marker.on('click', () => {
+                    bData.e = { name: m.name, id: m.id, atk: m.atk * lv, hp: m.atk * lv, max: m.atk * lv, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
+                    bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
+                    currentMarker = marker;
+                    document.getElementById('battle-screen').style.display = 'flex';
+                    document.getElementById('w-img').classList.remove('sucking');
+                    updateUI();
+                    document.getElementById('msg-text').innerText = `${bData.e.name}が現れた！`;
+                });
+            };
+            testImg.onerror = function() { console.log("画像なしIDをスキップしました: " + m.id); };
+            testImg.src = imgUrl;
         }
     }
 
