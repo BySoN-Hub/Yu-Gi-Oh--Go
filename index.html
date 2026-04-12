@@ -11,45 +11,25 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100vh; width: 100vw; color: white; touch-action: manipulation; }
         #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.6); font-size: 10px; color: var(--gold); z-index: 100000; padding: 2px 5px; border-radius: 3px; pointer-events: none; }
 
-        /* --- マップ --- */
+        /* レイアウト維持（Ver 0.9.3ベース） */
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; }
         .mon-chip { border: 2px solid var(--gold); border-radius: 4px; box-shadow: 0 0 8px rgba(255,215,0,0.5); object-fit: cover; }
         .lv-badge { position: absolute; top: -5px; right: -5px; background: #000; color: var(--gold); border: 1px solid var(--gold); font-size: 10px; padding: 1px 3px; border-radius: 3px; font-weight: bold; z-index: 10; }
-
-        /* --- UIボタン --- */
         .ui-btn { position: fixed; width: 65px; height: 65px; background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); z-index: 1000; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 10px var(--gold); }
         #deck-btn-ui { bottom: 30px; left: 20px; }
         #gps-btn-ui { bottom: 30px; right: 20px; font-size: 24px; }
-
-        /* --- バトル画面：ここをスマホに完全固定 --- */
-        #battle-screen { 
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: radial-gradient(circle, #1a1a3e, #000); 
-            display: none; flex-direction: column; z-index: 9000; overflow: hidden; 
-        }
-        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; gap: 5px; }
         
+        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
+        #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; gap: 5px; }
         .m-box { width: 100%; display: flex; align-items: center; justify-content: center; height: 32vh; }
-        /* カード画像を強制的に縦幅30%以下に制限 */
-        .battle-img { 
-            max-height: 28vh !important; 
-            width: auto !important; 
-            max-width: 45% !important; 
-            border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); 
-        }
-
+        .battle-img { max-height: 28vh !important; width: auto !important; max-width: 45% !important; border: 2px solid #555; border-radius: 5px; }
         .status-ui { width: 150px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 11px; margin: 0 8px; font-weight: bold; }
-        .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 3px; border: 1px solid #777; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-        .hp-danger { background: var(--red) !important; }
-
-        /* 下部UI：絶対に隠れないように高さを固定 */
-        #msg-window { height: 55px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; text-align: center; font-size: 14px; flex-shrink: 0; }
+        #msg-window { height: 55px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0; }
         #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; background: #222; flex-shrink: 0; }
         .cmd-btn { background: #eee; border: 2px solid #888; border-radius: 8px; font-weight: bold; font-size: 16px; }
 
-        /* デッキ画面・演出 */
-        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
         .card-box { border: 1px solid #444; padding: 5px; text-align: center; position: relative; background: #111; }
@@ -63,7 +43,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 0.9.3</div>
+<div id="version-tag">Ver 0.9.4</div>
 
 <div id="top-screen">
     <h1 style="color:var(--gold); text-shadow:0 0 15px #f00;">Yu-Gi-Oh! GO</h1>
@@ -90,7 +70,7 @@
             <div class="status-ui">
                 <div id="w-name-label" style="border-bottom:1px solid #999;">---</div>
                 <div id="w-stat-label" style="font-size:9px;">Lv.1 ATK:0</div>
-                <div class="hp-bar-bg"><div id="w-hp-fill" class="hp-bar-fill"></div></div>
+                <div style="height:8px; background:#ccc; border-radius:4px; overflow:hidden; margin-top:3px;"><div id="w-hp-fill" class="hp-bar-fill"></div></div>
                 <div style="text-align:right; font-size:9px;">HP:<span id="w-hp-now">0</span></div>
             </div>
             <img id="w-img" class="battle-img" src="">
@@ -99,7 +79,7 @@
             <div class="status-ui">
                 <div id="p-name-label" style="border-bottom:1px solid #999;">---</div>
                 <div id="p-stat-label" style="font-size:9px;">Lv.1 ATK:0</div>
-                <div class="hp-bar-bg"><div id="p-hp-fill" class="hp-bar-fill"></div></div>
+                <div style="height:8px; background:#ccc; border-radius:4px; overflow:hidden; margin-top:3px;"><div id="p-hp-fill" class="hp-bar-fill"></div></div>
                 <div style="text-align:right; font-size:9px;">HP:<span id="p-hp-now">0</span></div>
             </div>
             <img id="p-img" class="battle-img" src="" style="border:2px solid var(--cyan);">
@@ -119,7 +99,10 @@
 
 <script>
     let map, bData = { p: null, e: null, busy: false }, currentMarker;
-    let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"クリボー","id":40640057,"img":"https://images.ygoprodeck.com/images/cards/40640057.jpg","atk":300,"level":1,"count":1}]');
+    
+    // 【Ver 0.9.4】初期モンスターを「青眼の白龍」に修正
+    let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"level":1,"count":1}]');
+    
     let selectedIdx = -1;
 
     const monsterLib = [
@@ -149,7 +132,7 @@
             let marker = L.marker([lat+(Math.random()-0.5)*0.008, lon+(Math.random()-0.5)*0.008], {icon: icon}).addTo(map);
             marker.on('click', () => {
                 const total = m.atk * lv;
-                bData.e = { ...m, lv: lv, atk: total, hp: total, max: total, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
+                bData.e = { name: m.name, id: m.id, atk: total, hp: total, max: total, lv: lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
                 bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
                 currentMarker = marker;
                 document.getElementById('battle-screen').style.display = 'flex';
