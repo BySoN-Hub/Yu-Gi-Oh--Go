@@ -10,25 +10,36 @@
         :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --bg: #050510; }
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100vh; color: white; }
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; }
-        .monster-icon { filter: drop-shadow(0 0 8px var(--gold)); border-radius: 50%; object-fit: cover; object-position: top; border: 2px solid var(--gold); background: rgba(0,0,0,0.5); }
-        #deck-btn { position: fixed; bottom: 30px; left: 20px; width: 65px; height: 65px; background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); font-weight: bold; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--gold); }
-
-        /* デッキ・強化画面 */
-        #deck-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); display:none; z-index: 4000; padding: 20px; box-sizing: border-box; flex-direction: column; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; overflow-y: auto; flex: 1; }
-        .card-box { border: 2px solid #333; padding: 5px; border-radius: 5px; text-align: center; position: relative; transition: 0.2s; }
-        .card-box.is-main { border-color: var(--cyan); box-shadow: inset 0 0 10px var(--cyan); }
-        .card-box.base-select { border-color: var(--gold); transform: scale(1.05); }
-        .card-box.sac-select { border-color: var(--red); background: rgba(255,0,0,0.2); }
-        .card-box img { width: 100%; border-radius: 3px; }
-        .stock-badge { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; border-radius: 10px; padding: 2px 6px; font-size: 10px; font-weight: bold; border: 1px solid white; }
-
-        .btn-ui { padding: 12px; border: none; font-weight: bold; border-radius: 5px; margin-top: 5px; }
         
-        /* バトル・ポップアップ等は前回同様のため省略(内部ロジックに統合) */
-        #seal-screen, #result-popup { position: fixed; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; z-index: 2000; }
-        #seal-screen { background: #111; }
-        #result-popup { background: rgba(0,0,0,0.9); align-items: center; justify-content: center; z-index: 5000; }
+        /* デッキ・強化画面 */
+        #deck-screen { 
+            position: fixed; top:0; left:0; width:100%; height:100%; background: var(--bg); 
+            display:none; z-index: 4000; padding: 20px; box-sizing: border-box; 
+            flex-direction: column; 
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; overflow-y: auto; flex: 1; padding-bottom: 20px; }
+        
+        /* カードボックスのスタイル */
+        .card-box { border: 2px solid #333; padding: 5px; border-radius: 5px; text-align: center; position: relative; transition: 0.2s; background: #1a1a2e; }
+        .card-box.is-main { border-color: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+        .card-box.base-select { border-color: var(--gold); transform: scale(1.05); z-index: 10; box-shadow: 0 0 15px var(--gold); }
+        .card-box.sac-select { border-color: var(--red); background: rgba(255, 77, 77, 0.3); }
+        .card-box img { width: 100%; border-radius: 3px; display: block; }
+        
+        /* 枚数バッジ */
+        .stock-badge { 
+            position: absolute; top: -8px; right: -8px; background: var(--red); color: white; 
+            border-radius: 12px; padding: 2px 8px; font-size: 12px; font-weight: bold; border: 2px solid white; z-index: 20;
+        }
+
+        .controls { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .btn-ui { padding: 15px; border: none; font-weight: bold; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        
+        /* マップボタン */
+        #deck-btn { position: fixed; bottom: 30px; left: 20px; width: 65px; height: 65px; background: rgba(0,0,0,0.8); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); font-weight: bold; z-index: 1000; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px var(--gold); }
+        
+        /* 共通：他画面 */
+        #seal-screen, #result-popup { position: fixed; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; z-index: 2000; background: #111; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -37,68 +48,67 @@
 <div id="deck-btn" onclick="openDeck()">DECK</div>
 
 <div id="deck-screen">
-    <h3 style="text-align:center; color:var(--gold); margin-bottom:5px;">デュエリスト・データ</h3>
-    <div id="mode-text" style="text-align:center; font-size:12px; color:var(--cyan);">[ 通常モード ]</div>
+    <h3 id="mode-title" style="text-align:center; color:var(--gold); margin:0;">MY DECK</h3>
+    <p id="mode-desc" style="text-align:center; font-size:12px; color:#aaa; margin:5px 0;">カードを選択してください</p>
     
     <div id="deck-grid" class="grid"></div>
 
-    <div id="deck-controls" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
-        <div id="action-btns" style="display:flex; gap:5px;">
-            <button id="main-btn" onclick="setMain()" style="flex:1; display:none; background:var(--cyan);" class="btn-ui">戦闘に選ぶ</button>
-            <button id="enhance-mode-btn" onclick="toggleEnhanceMode()" style="flex:1; background:var(--gold);" class="btn-ui">強化モード</button>
+    <div class="controls">
+        <div style="display:flex; gap:8px;">
+            <button id="set-main-btn" onclick="setAsBattleMonster()" style="flex:1; background:var(--cyan); display:none;" class="btn-ui">戦闘に出す</button>
+            <button id="enhance-mode-toggle" onclick="toggleEnhanceMode()" style="flex:1; background:var(--gold);" class="btn-ui">強化モード</button>
         </div>
-        <button id="exec-enhance-btn" onclick="executeEnhancement()" style="display:none; background:var(--red); color:white;" class="btn-ui">生贄に捧げる</button>
-        <button onclick="closeDeck()" style="background:#444; color:white;" class="btn-ui">マップに戻る</button>
+        <button id="execute-sac-btn" onclick="confirmSacrifice()" style="display:none; background:var(--red); color:white;" class="btn-ui">生贄に捧げる（強化）</button>
+        <button onclick="closeDeck()" style="background:#333; color:white;" class="btn-ui">マップに戻る</button>
     </div>
 </div>
 
 <div id="seal-screen">
-    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-        <h2 id="w-name" style="color:var(--gold)"></h2>
-        <img id="w-img" style="width:200px;">
-        <div style="margin-top:20px;">
-            <button onclick="doAction('attack')" style="padding:15px 30px; background:var(--red); color:white; border:none; border-radius:10px;">攻撃</button>
-            <button onclick="doAction('seal')" style="padding:15px 30px; background:var(--gold); border:none; border-radius:10px;">封印</button>
-        </div>
+    <h2 id="w-name" style="color:var(--gold)"></h2>
+    <img id="w-img" style="width:200px; border:2px solid #fff;">
+    <div style="margin-top:30px; display:flex; gap:20px;">
+        <button onclick="doSeal()" style="padding:20px 40px; background:var(--gold); border:none; border-radius:10px; font-weight:bold;">封印</button>
+        <button onclick="location.reload()" style="padding:20px 40px; background:#444; color:white; border:none; border-radius:10px;">逃げる</button>
     </div>
 </div>
+
 <div id="result-popup" onclick="location.reload()">
-    <div style="color:var(--gold); font-size:24px; font-weight:bold;">封印成功！</div>
-    <img id="result-card" style="width:200px; border:3px solid white; margin-top:20px;">
+    <h2 style="color:var(--gold)">封印成功！</h2>
+    <img id="res-img" style="width:200px; border:4px solid white;">
+    <p>ストックに追加されました</p>
 </div>
 
 <script>
     let map, currentEnemy;
-    // データ構造を「個数(count)」を持つ形に
+    // データは count（枚数）を持つ形式
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"クリボー","img":"https://images.ygoprodeck.com/images/cards/40640057.jpg","atk":300,"level":1,"uid":1,"count":1}]');
 
-    let isEnhanceMode = false;
+    let enhanceActive = false;
     let baseCard = null;
     let sacrifices = [];
 
-    // MAP
+    // 地図初期化
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             map = L.map('map', {zoomControl:false}).setView([pos.coords.latitude, pos.coords.longitude], 17);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
             L.circleMarker([pos.coords.latitude, pos.coords.longitude], {color:'#00ffff', radius:8}).addTo(map);
-            spawn(pos.coords.latitude, pos.coords.longitude);
+            spawnMonsters(pos.coords.latitude, pos.coords.longitude);
         });
     }
 
-    function spawn(lat, lon) {
+    function spawnMonsters(lat, lon) {
         const pool = [
             {name:"青眼の白龍", img:"https://images.ygoprodeck.com/images/cards/89631139.jpg", atk:3000},
             {name:"ブラック・マジシャン", img:"https://images.ygoprodeck.com/images/cards/46986414.jpg", atk:2500},
             {name:"真紅眼の黒竜", img:"https://images.ygoprodeck.com/images/cards/74677422.jpg", atk:2400}
         ];
-        for(let i=0; i<12; i++) {
+        for(let i=0; i<12; i++){
             let m = pool[Math.floor(Math.random()*pool.length)];
-            let marker = L.marker([lat+(Math.random()-0.5)*0.006, lon+(Math.random()-0.5)*0.006], {
-                icon: L.icon({iconUrl: m.img, iconSize:[60,60], className:'monster-icon'})
-            }).addTo(map);
-            marker.on('click', () => {
-                currentEnemy = {...m, hp:100, marker};
+            L.marker([lat+(Math.random()-0.5)*0.006, lon+(Math.random()-0.5)*0.006], {
+                icon: L.icon({iconUrl: m.img, iconSize:[50,70], className:'monster-icon'})
+            }).addTo(map).on('click', function(){
+                currentEnemy = m;
                 document.getElementById('seal-screen').style.display = 'flex';
                 document.getElementById('w-name').innerText = m.name;
                 document.getElementById('w-img').src = m.img;
@@ -106,116 +116,118 @@
         }
     }
 
-    function doAction(type) {
-        if(type==='attack') alert("攻撃！");
-        else {
-            document.getElementById('result-popup').style.display='flex';
-            document.getElementById('result-card').src = currentEnemy.img;
-            addMonster(currentEnemy);
-        }
-    }
-
-    function addMonster(m) {
-        let existing = myDeck.find(d => d.name === m.name);
-        if(existing) {
-            existing.count++;
-        } else {
-            myDeck.push({...m, level:1, count:1, uid:Date.now()});
-        }
+    function doSeal() {
+        // 捕獲処理
+        let target = myDeck.find(d => d.name === currentEnemy.name);
+        if(target) target.count++;
+        else myDeck.push({...currentEnemy, count:1, level:1, uid:Date.now()});
+        
         localStorage.setItem('myDeck', JSON.stringify(myDeck));
+        document.getElementById('res-img').src = currentEnemy.img;
+        document.getElementById('result-popup').style.display = 'flex';
     }
 
-    // デッキ画面
+    // デッキ画面ロジック
     function openDeck() {
-        document.getElementById('deck-screen').style.display = 'flex';
-        resetState();
-        render();
-    }
-
-    function resetState() {
-        isEnhanceMode = false;
+        enhanceActive = false;
         baseCard = null;
         sacrifices = [];
-        document.getElementById('mode-text').innerText = "[ 通常モード ]";
-        document.getElementById('enhance-mode-btn').innerText = "強化モード";
+        document.getElementById('deck-screen').style.display = 'flex';
+        renderDeck();
     }
 
     function toggleEnhanceMode() {
-        isEnhanceMode = !isEnhanceMode;
+        enhanceActive = !enhanceActive;
         baseCard = null;
         sacrifices = [];
-        document.getElementById('mode-text').innerText = isEnhanceMode ? "[ 強化：ベースを選んでください ]" : "[ 通常モード ]";
-        document.getElementById('enhance-mode-btn').innerText = isEnhanceMode ? "キャンセル" : "強化モード";
-        render();
+        renderDeck();
     }
 
-    function render() {
+    function renderDeck() {
         const grid = document.getElementById('deck-grid');
+        const modeTitle = document.getElementById('mode-title');
+        const modeDesc = document.getElementById('mode-desc');
         grid.innerHTML = '';
+
+        if(enhanceActive) {
+            modeTitle.innerText = "強化モード";
+            modeTitle.style.color = "var(--red)";
+            modeDesc.innerText = !baseCard ? "強化したいベースを選択" : "生贄にする素材を選択（複数可）";
+        } else {
+            modeTitle.innerText = "MY DECK";
+            modeTitle.style.color = "var(--gold)";
+            modeDesc.innerText = "カードを選択してください";
+        }
+
         myDeck.forEach((m, i) => {
             let cls = 'card-box';
             if(i === 0) cls += ' is-main';
             if(baseCard && baseCard.uid === m.uid) cls += ' base-select';
-            if(sacrifices.includes(m.uid)) cls += ' sac-select';
+            if(sacrifices.some(s => s.uid === m.uid)) cls += ' sac-select';
 
             grid.innerHTML += `
-                <div class="${cls}" onclick="clickCard(${i})">
+                <div class="${cls}" onclick="handleCardClick(${i})">
                     ${m.count > 1 ? `<div class="stock-badge">×${m.count}</div>` : ''}
                     <img src="${m.img}">
-                    <div style="font-size:9px;">ATK:${m.atk} Lv.${m.level}</div>
+                    <div style="font-size:10px; margin-top:4px;">ATK:${m.atk}</div>
                 </div>`;
         });
-        
-        document.getElementById('main-btn').style.display = (!isEnhanceMode && baseCard) ? 'block' : 'none';
-        document.getElementById('exec-enhance-btn').style.display = (isEnhanceMode && baseCard && sacrifices.length > 0) ? 'block' : 'none';
+
+        // ボタン表示制御
+        document.getElementById('set-main-btn').style.display = (!enhanceActive && baseCard && myDeck[0].uid !== baseCard.uid) ? "block" : "none";
+        document.getElementById('execute-sac-btn').style.display = (enhanceActive && baseCard && sacrifices.length > 0) ? "block" : "none";
+        document.getElementById('enhance-mode-toggle').innerText = enhanceActive ? "キャンセル" : "強化モード";
     }
 
-    function clickCard(i) {
-        const card = myDeck[i];
-        if(!isEnhanceMode) {
+    function handleCardClick(index) {
+        const card = myDeck[index];
+        if(!enhanceActive) {
+            // 通常モード：1枚選択
             baseCard = (baseCard?.uid === card.uid) ? null : card;
         } else {
+            // 強化モード
             if(!baseCard) {
                 baseCard = card;
-                document.getElementById('mode-text').innerText = "[ 強化：生贄を選んでください ]";
             } else if(baseCard.uid === card.uid) {
                 baseCard = null; sacrifices = [];
-                document.getElementById('mode-text').innerText = "[ 強化：ベースを選んでください ]";
             } else {
-                const sIdx = sacrifices.indexOf(card.uid);
+                const sIdx = sacrifices.findIndex(s => s.uid === card.uid);
                 if(sIdx > -1) sacrifices.splice(sIdx, 1);
-                else sacrifices.push(card.uid);
+                else sacrifices.push(card);
             }
         }
-        render();
+        renderDeck();
     }
 
-    function setMain() {
+    function setAsBattleMonster() {
         const idx = myDeck.findIndex(m => m.uid === baseCard.uid);
         const [target] = myDeck.splice(idx, 1);
         myDeck.unshift(target);
-        localStorage.setItem('myDeck', JSON.stringify(myDeck));
-        openDeck();
+        saveAndRefresh();
     }
 
-    function executeEnhancement() {
-        const totalSac = sacrifices.length;
-        if(!confirm(`${totalSac}種類のカードを生贄に捧げますか？\n(数量が1ずつ減ります)`)) return;
-
+    function confirmSacrifice() {
+        if(!confirm(`${sacrifices.length}種類のカードを生贄に捧げ、${baseCard.name}を強化しますか？`)) return;
+        
         const target = myDeck.find(m => m.uid === baseCard.uid);
-        sacrifices.forEach(uid => {
-            const sCard = myDeck.find(m => m.uid === uid);
-            sCard.count--;
+        sacrifices.forEach(s => {
+            const material = myDeck.find(m => m.uid === s.uid);
+            material.count--;
             target.level++;
-            target.atk = Math.floor(target.atk * 1.15);
-            if(sCard.count <= 0) {
-                myDeck = myDeck.filter(m => m.uid !== uid);
+            target.atk = Math.floor(target.atk * 1.15); // 15%アップ
+            if(material.count <= 0) {
+                myDeck = myDeck.filter(m => m.uid !== s.uid);
             }
         });
+        saveAndRefresh();
+        alert("強化が完了しました！");
+    }
 
+    function saveAndRefresh() {
         localStorage.setItem('myDeck', JSON.stringify(myDeck));
-        alert("強化完了！");
-        openDeck();
+        baseCard = null;
+        sacrifices = [];
+        renderDeck();
     }
 
     function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
