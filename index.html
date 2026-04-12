@@ -2,144 +2,300 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yu-Gi-Oh! GO - Hybrid Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yu-Gi-Oh! GO - SEAL DUEL</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; }
-        #map { width: 100vw; height: 100vh; }
-        .monster-icon {
-            filter: drop-shadow(0 0 8px gold);
-            border: 2px solid gold;
-            border-radius: 4px;
-            background: rgba(0,0,0,0.5);
-        }
-        #capture-screen {
+        :root { --main-bg: #050510; --gold: #ffd700; --cyan: #00ffff; --red: #e74c3c; }
+        body { margin: 0; padding: 0; background: var(--main-bg); font-family: 'Segoe UI', sans-serif; overflow: hidden; color: white; }
+        #map { width: 100vw; height: 100vh; z-index: 1; }
+        
+        /* マップアイコン */
+        .monster-icon { filter: drop-shadow(0 0 5px var(--gold)); border: 1px solid var(--gold); border-radius: 4px; background: rgba(0,0,0,0.5); }
+        #status-bar { position: fixed; top: 15px; width: 100%; text-align: center; z-index: 1000; color: var(--cyan); font-weight: bold; text-shadow: 0 0 10px #000; pointer-events: none; }
+
+        /* --- 封印（バトル）画面 --- */
+        #seal-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); display: none;
-            flex-direction: column; align-items: center; justify-content: center; z-index: 2000;
-            color: white; text-align: center;
+            background: linear-gradient(to bottom, #1a1a2e, #000);
+            display: none; flex-direction: column; z-index: 2000;
         }
-        #monster-art { width: 260px; border: 3px solid gold; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 0 30px rgba(255,215,0,0.3); }
-        #seal-button {
-            padding: 15px 40px; background: linear-gradient(45deg, #c0392b, #e74c3c); color: white;
-            border: none; border-radius: 50px; font-weight: bold; cursor: pointer; font-size: 1.2rem;
+
+        /* モンスター配置 */
+        .battle-stage { flex: 2; display: flex; align-items: center; justify-content: space-around; padding: 20px; position: relative; }
+        .monster-box { text-align: center; width: 45%; transition: all 0.3s; }
+        .monster-box.player { transform: translateY(30px); }
+        .monster-box.wild { transform: translateY(-30px); }
+        .battle-img { width: 100%; max-width: 180px; border-radius: 10px; box-shadow: 0 0 20px rgba(255,215,0,0.3); border: 2px solid #333; }
+        .monster-box.player .battle-img { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,255,255,0.3); }
+        .monster-box.wild .battle-img { border-color: var(--gold); }
+
+        /* ステータスバー (HP/封印ゲージ) */
+        .status-bar { background: rgba(0,0,0,0.5); padding: 5px; border-radius: 5px; margin-top: 5px; border: 1px solid #444; }
+        .gauge-bg { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-top: 3px; }
+        .gauge-fill { height: 100%; background: lime; width: 100%; transition: width 0.5s, background 0.3s; }
+
+        /* メッセージウィンドウ */
+        #message-window { flex: 0.5; background: rgba(255,255,255,0.1); border: 2px solid #444; margin: 10px; padding: 15px; border-radius: 10px; font-size: 1.1rem; text-shadow: 1px 1px 2px #000; }
+
+        /* コマンドパネル（ポケモン風） */
+        #command-panel {
+            flex: 1; background: #222; border-top: 4px solid #444;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px;
         }
-        #status-bar {
-            position: fixed; top: 15px; width: 100%; text-align: center;
-            z-index: 1000; color: #00ffff; font-weight: bold; font-size: 1.1rem;
-            text-shadow: 0 0 10px #000; pointer-events: none;
+        .cmd-btn {
+            background: linear-gradient(to bottom, #444, #222);
+            border: 2px solid #666; border-radius: 8px; color: white;
+            font-size: 1.3rem; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; -webkit-tap-highlight-color: transparent;
         }
+        .cmd-btn:active { transform: scale(0.95); background: #333; }
+        .cmd-btn.fight { border-color: var(--red); color: #ffcccc; }
+        .cmd-btn.seal { border-color: var(--gold); color: #fff8cc; }
+
+        /* 交代リスト（オーバーレイ） */
+        #party-screen {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 60%;
+            background: rgba(0,0,0,0.9); border-top: 3px solid var(--cyan);
+            display: none; flex-direction: column; padding: 20px; box-sizing: border-box; z-index: 2500;
+        }
+        .party-member { display: flex; align-items: center; background: #111; border: 1px solid #333; margin-bottom: 8px; padding: 10px; border-radius: 5px; cursor: pointer; }
+        .party-member:hover { border-color: var(--cyan); }
     </style>
 </head>
 <body>
 
-<div id="status-bar">デュエル・スキャナー：索敵中...</div>
+<div id="status-bar">デュエル・スキャナー索敵中...</div>
 <div id="map"></div>
 
-<div id="capture-screen">
-    <h2 id="m-name"></h2>
-    <p id="m-type" style="color: gold;"></p>
-    <img id="monster-art" src="">
-    <button id="seal-button" onclick="sealMonster()">カードへ封印</button>
+<div id="seal-screen">
+    <div class="battle-stage">
+        <div class="monster-box player">
+            <div class="status-bar">
+                <div style="font-weight:bold; color:var(--cyan);" id="p-name"></div>
+                <div style="font-size:0.8rem;">ATK: <span id="p-atk"></span></div>
+            </div>
+            <img id="p-img" class="battle-img" src="">
+        </div>
+        
+        <div class="monster-box wild">
+            <div class="status-bar">
+                <div style="font-weight:bold; color:var(--gold);" id="w-name"></div>
+                <div class="gauge-bg"><div id="w-gauge" class="gauge-fill"></div></div>
+            </div>
+            <img id="w-img" class="battle-img" src="">
+        </div>
+    </div>
+
+    <div id="message-window">
+        <span id="battle-msg">野生のモンスターが現れた！</span>
+    </div>
+
+    <div id="command-panel">
+        <button class="cmd-btn fight" onclick="handleCommand('fight')">攻撃</button>
+        <button class="cmd-btn" onclick="handleCommand('party')">交代</button>
+        <button class="cmd-btn seal" onclick="handleCommand('seal')">封印</button>
+        <button class="cmd-btn" onclick="handleCommand('run')">逃げる</button>
+    </div>
+
+    <div id="party-screen">
+        <h3 style="color:var(--cyan);">モンスターを交代</h3>
+        <div id="party-list" style="overflow-y:auto; flex:1;"></div>
+        <button onclick="closeParty()" style="margin-top:10px; padding:10px; background:#444; color:white; border:none; border-radius:5px;">戻る</button>
+    </div>
 </div>
 
 <script>
+    // --- 初期データ & GPS ---
     let map, userMarker;
-    let currentMonster = null;
-    let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
+    let currentBattle = null; // 現在のバトル状態
+    
+    // デッキ（手持ち）の読み込み。いなければクリボーをセット
+    let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[]');
+    if (myDeck.length === 0) {
+        myDeck.push({ id: 11813, name: "クリボー", img: "https://images.ygoprodeck.com/images/cards/40640057.jpg", atk: 300, def: 200, level: 1 });
+        localStorage.setItem('myDeck', JSON.stringify(myDeck));
+    }
+    // 現在場に出ているモンスター（デッキの1番目）
+    let activeMonsterIndex = 0;
 
-    // ベースとなるモンスターリスト
+    // ベースモンスターリスト
     const baseList = [
-        { name: "青眼の白龍", img: "https://images.ygoprodeck.com/images/cards/89631139.jpg", type: "Dragon" },
-        { name: "ブラック・マジシャン", img: "https://images.ygoprodeck.com/images/cards/46986414.jpg", type: "Spellcaster" },
-        { name: "真紅眼の黒竜", img: "https://images.ygoprodeck.com/images/cards/74677422.jpg", type: "Dragon" }
+        { id: 1, name: "青眼の白龍", img: "https://images.ygoprodeck.com/images/cards/89631139.jpg", atk: 3000 },
+        { id: 2, name: "ブラック・マジシャン", img: "https://images.ygoprodeck.com/images/cards/46986414.jpg", atk: 2500 },
+        { id: 3, name: "真紅眼の黒竜", img: "https://images.ygoprodeck.com/images/cards/74677422.jpg", atk: 2400 },
+        { id: 4, name: "デーモンの召喚", img: "https://images.ygoprodeck.com/images/cards/70781052.jpg", atk: 2500 }
     ];
+
+    // --- 地図 & 出現 ---
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => initMap(pos.coords.latitude, pos.coords.longitude),
+            () => initMap(35.6586, 139.7454) // 東京タワー
+        );
+    }
 
     function initMap(lat, lon) {
         map = L.map('map', { zoomControl: false }).setView([lat, lon], 17);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-
-        userMarker = L.circleMarker([lat, lon], {
-            color: '#00ffff', radius: 8, fillOpacity: 1, weight: 3
-        }).addTo(map);
-
-        // APIから新しいモンスターを読み込んで配置
+        userMarker = L.circleMarker([lat, lon], { color: '#00ffff', radius: 8, fillOpacity: 1 }).addTo(map);
         loadAndSpawnMonsters(lat, lon);
     }
 
     async function loadAndSpawnMonsters(lat, lon) {
-        document.getElementById('status-bar').innerText = "通信中：未知の信号を受信...";
-        
-        for(let i=0; i < 6; i++) {
-            let monster;
-            try {
-                // APIからランダム取得（プロキシ経由でCORS回避を試行）
-                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://db.ygoprodeck.com/api/v7/randomcard.php')}`);
-                const data = await res.json();
-                
-                if (data.card_images && !data.type.includes("Spell") && !data.type.includes("Trap")) {
-                    monster = { 
-                        name: data.name, 
-                        img: data.card_images[0].image_url, 
-                        type: data.race 
-                    };
-                } else {
-                    throw new Error("Not a monster");
-                }
-            } catch (e) {
-                // APIがダメならリストから選ぶ
-                monster = baseList[Math.floor(Math.random() * baseList.length)];
-            }
-
-            spawnOnMap(monster, lat, lon);
+        for(let i=0; i < 5; i++) {
+            let monster = baseList[Math.floor(Math.random() * baseList.length)];
+            const mLat = lat + (Math.random() - 0.5) * 0.003;
+            const mLon = lon + (Math.random() - 0.5) * 0.003;
+            const icon = L.icon({ iconUrl: monster.img, iconSize: [55, 80], className: 'monster-icon' });
+            const marker = L.marker([mLat, mLon], { icon: icon }).addTo(map);
+            // タップでバトル開始
+            marker.on('click', () => startBattle(monster, marker));
         }
-        document.getElementById('status-bar').innerText = "スキャン完了：モンスターを確認！";
     }
 
-    function spawnOnMap(monster, lat, lon) {
-        const mLat = lat + (Math.random() - 0.5) * 0.003;
-        const mLon = lon + (Math.random() - 0.5) * 0.003;
+    // --- バトルロジック ---
 
-        const icon = L.icon({
-            iconUrl: monster.img,
-            iconSize: [60, 87],
-            className: 'monster-icon'
+    const ui = {
+        screen: document.getElementById('seal-screen'),
+        msg: document.getElementById('battle-msg'),
+        pName: document.getElementById('p-name'), pAtk: document.getElementById('p-atk'), pImg: document.getElementById('p-img'),
+        wName: document.getElementById('w-name'), wImg: document.getElementById('w-img'), wGauge: document.getElementById('w-gauge'),
+        party: document.getElementById('party-screen'), partyList: document.getElementById('party-list')
+    };
+
+    // バトル開始
+    function startBattle(wildMonster, marker) {
+        currentBattle = {
+            wild: { ...wildMonster, maxHp: wildMonster.atk, hp: wildMonster.atk }, // HPはATKを利用
+            marker: marker
+        };
+        ui.screen.style.display = 'flex';
+        updateBattleUI();
+        setMessage(`野生の ${wildMonster.name} (ATK ${wildMonster.atk}) が現れた！`);
+    }
+
+    // UI更新
+    function updateBattleUI() {
+        const player = myDeck[activeMonsterIndex];
+        const wild = currentBattle.wild;
+        
+        // プレイヤー側
+        ui.pName.innerText = player.name;
+        ui.pAtk.innerText = player.atk;
+        ui.pImg.src = player.img;
+        
+        // 野生側
+        ui.wName.innerText = wild.name;
+        ui.wImg.src = wild.img;
+        
+        // 封印ゲージ
+        const hpPercent = (wild.hp / wild.maxHp) * 100;
+        ui.wGauge.style.width = hpPercent + '%';
+        if (hpPercent > 50) ui.wGauge.style.background = 'lime';
+        else if (hpPercent > 20) ui.wGauge.style.background = 'orange';
+        else ui.wGauge.style.background = 'red';
+    }
+
+    function setMessage(msg) { ui.msg.innerText = msg; }
+
+    // コマンド処理
+    function handleCommand(cmd) {
+        if (!currentBattle) return;
+        const player = myDeck[activeMonsterIndex];
+        const wild = currentBattle.wild;
+
+        switch(cmd) {
+            case 'fight': // 攻撃
+                const damage = player.atk;
+                wild.hp = Math.max(0, wild.hp - damage);
+                setMessage(`${player.name} の攻撃！ ${wild.name} に ${damage} ダメージ！`);
+                updateBattleUI();
+                if (wild.hp === 0) {
+                    setTimeout(() => setMessage(`${wild.name} は動けなくなった！封印のチャンスだ！`), 1000);
+                }
+                break;
+            
+            case 'seal': // 封印
+                setMessage(`${player.name} はカードを掲げた！封印を試みる...`);
+                // 成功率計算：相手のHPが低いほど上がる (最低5%, 最大95%)
+                const hpRatio = wild.hp / wild.maxHp;
+                const successRate = 1.0 - (hpRatio * 0.9); 
+                
+                setTimeout(() => {
+                    if (Math.random() < successRate) {
+                        finishBattle(true); // 成功
+                    } else {
+                        setMessage(`${wild.name} は封印を跳ね返した！もっと弱らせないとダメだ。`);
+                    }
+                }, 1500);
+                break;
+            
+            case 'party': // 交代画面を開く
+                openParty();
+                break;
+            
+            case 'run': // 逃げる
+                finishBattle(false);
+                break;
+        }
+    }
+
+    // バトル終了
+    function finishBattle(caught) {
+        if (caught) {
+            alert(`【封印成功】\n${currentBattle.wild.name} をカードに収めた！`);
+            // デッキに保存（育成用に初期レベル1）
+            myDeck.push({ ...currentBattle.wild, level: 1 });
+            localStorage.setItem('myDeck', JSON.stringify(myDeck));
+            // 地図から消す
+            map.removeLayer(currentBattle.marker);
+        } else {
+            alert("デュエルから離脱しました。");
+        }
+        
+        currentBattle = null;
+        ui.screen.style.display = 'none';
+        closeParty();
+    }
+
+    // --- 交代システム ---
+    function openParty() {
+        ui.party.style.display = 'flex';
+        ui.partyList.innerHTML = '';
+        
+        myDeck.forEach((monster, index) => {
+            if (index === activeMonsterIndex) return; // 今出てるのは飛ばす
+            
+            const div = document.createElement('div');
+            div.className = 'party-member';
+            div.innerHTML = `
+                <img src="${monster.img}" style="width:40px; height:58px; margin-right:10px;">
+                <div>
+                    <b>${monster.name}</b><br>
+                    <span style="font-size:0.8rem; color:#aaa;">ATK: ${monster.atk} / Lv: ${monster.level}</span>
+                </div>
+            `;
+            div.onclick = () => changeMonster(index);
+            ui.partyList.appendChild(div);
         });
-
-        const marker = L.marker([mLat, mLon], { icon: icon }).addTo(map);
-        marker.on('click', () => openCapture(monster, marker));
-    }
-
-    function openCapture(monster, marker) {
-        currentMonster = { monster, marker };
-        document.getElementById('m-name').innerText = monster.name;
-        document.getElementById('m-type').innerText = `[ ${monster.type} ]`;
-        document.getElementById('monster-art').src = monster.img;
-        document.getElementById('capture-screen').style.display = 'flex';
-    }
-
-    function sealMonster() {
-        const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-37a.mp3'); // 簡易SE
-        audio.play().catch(()=>{});
-
-        alert(`【封印成功】\n${currentMonster.monster.name} をカードに収めた！`);
         
-        map.removeLayer(currentMonster.marker);
-        deck.push({ ...currentMonster.monster, caughtAt: new Date() });
-        localStorage.setItem('myDeck', JSON.stringify(deck));
-        
-        document.getElementById('capture-screen').style.display = 'none';
+        if (myDeck.length <= 1) {
+            ui.partyList.innerHTML = '<p style="text-align:center; color:#888;">交代できるモンスターがいません。</p>';
+        }
     }
 
-    // 起動処理
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            pos => initMap(pos.coords.latitude, pos.coords.longitude),
-            () => initMap(35.6586, 139.7454) // 失敗時は東京タワー
-        );
+    function closeParty() { ui.party.style.display = 'none'; }
+
+    function changeMonster(index) {
+        activeMonsterIndex = index;
+        setMessage(`${myDeck[index].name} ！君に決めた！ (交代した)`);
+        updateBattleUI();
+        closeParty();
     }
+
 </script>
 </body>
 </html>
