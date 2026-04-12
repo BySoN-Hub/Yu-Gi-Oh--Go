@@ -61,7 +61,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.1.4</div>
+<div id="version-tag">Ver 1.1.5</div>
 <audio id="bgm" loop></audio>
 
 <div id="top-screen">
@@ -127,7 +127,7 @@
 
 <script>
     let map, bData = { p: null, e: null, busy: false }, currentMarker;
-    let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"level":1,"count":1}]');
+    let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"baseAtk":3000,"level":1,"count":1}]');
     let selectedIdx = -1;
 
     const bgmList = ["Overlap.mp3", "KawaitaSakebi.mp3", "WILDDRIVE.mp3"];
@@ -144,15 +144,11 @@
         {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500},
         {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000},
         {name:"カオス・ソルジャー", id:54056941, atk:3000}, {name:"暗黒騎士ガイア", id:6368038, atk:2300},
-        {name:"エルフの剣士", id:91152256, atk:1400}, {name:"ホーリー・エルフ", id:15025844, atk:800},
-        {name:"バスター・ブレイダー", id:78193831, atk:2600}, {name:"ブラック・マジシャン・ガール", id:38033121, atk:2000},
-        {name:"サイバー・ドラゴン", id:70095154, atk:2100}, {name:"スターダスト・ドラゴン", id:44508094, atk:2500},
-        {name:"青眼の究極竜", id:23995346, atk:4500}, {name:"オベリスクの巨神兵", id:13839129, atk:4000},
-        {name:"サクリファイス", id:64631466, atk:0}, {name:"破壊竜ガンドラ", id:21175632, atk:0},
-        {name:"教導の聖女エクレシア", id:60303245, atk:1500}, {name:"閃刀姫－レイ", id:26077387, atk:1500},
-        {name:"灰流うらら", id:14558127, atk:0}, {name:"増殖するＧ", id:23434538, atk:500},
-        {name:"モリンフェン", id:4035199, atk:1550}, {name:"デビルゾア", id:24311372, atk:2600}
-        /* ... 他の種類は内部的に保持 ... */
+        {name:"ハーピィ・レディ三姉妹", id:12206212, atk:1950}, {name:"人造人間-サイコ・ショッカー", id:77585513, atk:2400},
+        {name:"究極完全態・グレート・モス", id:48579379, atk:3500}, {name:"ゲート・ガーディアン", id:46668237, atk:3750},
+        {name:"青眼の究極竜", id:23995346, atk:4500}, {name:"混沌の黒魔術師", id:30741503, atk:2800},
+        {name:"オベリスクの巨神兵", id:13839129, atk:4000}, {name:"灰流うらら", id:14558127, atk:0},
+        {name:"増殖するＧ", id:23434538, atk:500}, {name:"原始生命態ニビル", id:27204311, atk:3000}
     ];
 
     function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); playRandomBGM(); }
@@ -170,7 +166,7 @@
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
         for(let i=0; i<50; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
-            let lv = Math.floor(Math.random()*4)+1;
+            let lv = Math.floor(Math.random()*6)+1;
             let imgUrl = `https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg`;
             
             let testImg = new Image();
@@ -178,11 +174,12 @@
                 const icon = L.divIcon({ className: 'mon-container', html: `<img src="${imgUrl}" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
                 let marker = L.marker([lat+(Math.random()-0.5)*0.012, lon+(Math.random()-0.5)*0.008], {icon: icon}).addTo(map);
                 marker.on('click', () => {
-                    // --- HP0バグ対策ロジック ---
-                    let totalAtk = m.atk * lv;
-                    let initialHP = (totalAtk <= 0) ? 100 : totalAtk; 
+                    // --- 加算方式のステータス計算 (Ver 1.1.5) ---
+                    let bonus = (lv - 1) * 1000;
+                    let totalAtk = m.atk + bonus;
+                    let initialHP = (totalAtk <= 0) ? 100 + bonus : totalAtk;
                     
-                    bData.e = { name: m.name, id: m.id, atk: totalAtk, hp: initialHP, max: initialHP, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
+                    bData.e = { name: m.name, id: m.id, atk: totalAtk, baseAtk: m.atk, hp: initialHP, max: initialHP, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
                     bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
                     currentMarker = marker;
                     document.getElementById('battle-screen').style.display = 'flex';
@@ -199,7 +196,7 @@
         if(!bData.e || !bData.p) return;
         const setUI = (p, d) => {
             document.getElementById(`${p}-name-label`).innerText = d.name;
-            const lvDisplay = (p === 'p') ? (Math.floor(d.atk / 1000) + 1) : (d.level || d.lv);
+            const lvDisplay = (p === 'p') ? (Math.floor((d.atk - (d.baseAtk || 0)) / 1000) + 1) : d.lv;
             document.getElementById(`${p}-stat-label`).innerText = `Lv.${lvDisplay} ATK:${d.atk}`;
             document.getElementById(`${p}-hp-fill`).style.width = (d.hp/d.max*100) + '%';
             document.getElementById(`${p}-hp-num`).innerText = `${Math.floor(d.hp)} / ${Math.floor(d.max)}`;
@@ -224,8 +221,6 @@
             document.getElementById('fusion-vortex').style.display = 'none';
             document.getElementById('seal-base-card').style.display = 'none';
             
-            // --- 封印確率の上方修正ロジック ---
-            // 基礎確率を30%にし、HPが減るほどさらに上がるように調整
             let baseChance = 0.3; 
             let hpBonus = (1 - (bData.e.hp / bData.e.max)) * 0.7;
             if(Math.random() < (baseChance + hpBonus)) {
@@ -237,7 +232,7 @@
             document.getElementById('msg-text').innerText = "失敗！";
         }
         await new Promise(r => setTimeout(r, 800));
-        bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk*0.4 + 50)); // 最低ダメージ保証
+        bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk*0.4 + 50));
         updateUI();
         if(bData.p.hp <= 0) { alert("敗北..."); closeBattleUI(); }
         bData.busy = false;
@@ -245,7 +240,14 @@
 
     function saveCapture(m) {
         let exist = myDeck.find(d => d.id === m.id);
-        if(exist) exist.count++; else myDeck.push({...m, count:1, level:1, uid:Date.now()});
+        if(exist) {
+            exist.count++;
+        } else {
+            myDeck.push({
+                name: m.name, id: m.id, atk: m.atk, baseAtk: m.baseAtk, 
+                img: m.img, count: 1, level: m.lv, uid: Date.now()
+            });
+        }
         localStorage.setItem('myDeck', JSON.stringify(myDeck));
     }
 
@@ -253,7 +255,7 @@
     function renderDeck() {
         const main = myDeck[0];
         document.getElementById('main-mon-img').src = main.img;
-        const mainLv = Math.floor(main.atk / 1000) + 1;
+        const mainLv = Math.floor((main.atk - (main.baseAtk || 0)) / 1000) + 1;
         document.getElementById('main-mon-stat').innerText = `Lv.${mainLv} ATK:${main.atk}`;
         const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
         myDeck.forEach((m, i) => {
@@ -270,7 +272,7 @@
     function executeEnhance() {
         if(selectedIdx === -1) return;
         if(selectedIdx === 0 && myDeck[0].count <= 1) { alert("メインモンスターを素材にはできません"); return; }
-        myDeck[0].atk += Math.floor(myDeck[selectedIdx].atk * 0.1 + 100); // 強化幅も少しアップ
+        myDeck[0].atk += 500; // 強化幅を固定加算に調整
         myDeck[selectedIdx].count--; if(myDeck[selectedIdx].count <= 0) myDeck.splice(selectedIdx, 1);
         localStorage.setItem('myDeck', JSON.stringify(myDeck)); selectedIdx = -1; renderDeck();
     }
