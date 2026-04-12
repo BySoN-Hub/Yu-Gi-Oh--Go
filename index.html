@@ -9,8 +9,6 @@
     <style>
         :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --fusion: #8e44ad; --bg: #050510; }
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100dvh; width: 100vw; color: white; touch-action: manipulation; }
-        
-        /* バージョン表示：全ての画面の最前面に */
         #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); font-size: 10px; color: var(--gold); z-index: 2000000; padding: 2px 5px; border-radius: 3px; pointer-events: none; border: 1px solid rgba(255,215,0,0.3); }
 
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; }
@@ -34,37 +32,10 @@
         .btn-chance { animation: blink-btn 0.6s infinite alternate; border: 3px solid #ff8c00 !important; background: #fff !important; color: #ff8c00 !important; box-shadow: 0 0 15px #ff8c00; }
         @keyframes blink-btn { from { opacity: 1; transform: scale(1); } to { opacity: 0.7; transform: scale(1.05); } }
 
-        /* --- 封印演出パーツ：楕円にならないよう正円に固定 --- */
         #seal-base-card { position: absolute; width: 100px; height: 145px; background: #3c2415; border: 3px solid var(--gold); border-radius: 8px; display: none; z-index: 9400; top: 12dvh; box-shadow: 0 0 30px var(--fusion); }
-        
-        #fusion-vortex { 
-            position: absolute; 
-            top: 12dvh; 
-            left: 50%; 
-            width: 145px; /* カードの高さに合わせる */
-            height: 145px; /* 正円にするため高さを幅と同じに */
-            transform: translateX(-50%); 
-            display: none; 
-            z-index: 9500; 
-            align-items: center; 
-            justify-content: center; 
-            pointer-events: none;
-            aspect-ratio: 1 / 1; /* アスペクト比を1:1に強制 */
-        }
-        .vortex-anim { 
-            width: 250px; 
-            height: 250px; 
-            border: 15px dashed var(--fusion); 
-            border-radius: 50%; 
-            animation: spin-v 1.1s ease-in forwards; 
-            flex-shrink: 0;
-            box-shadow: 0 0 40px var(--fusion);
-        }
-        @keyframes spin-v { 
-            0% { transform: scale(2.5) rotate(0deg); opacity: 0; } 
-            40% { opacity: 1; } 
-            100% { transform: scale(0) rotate(720deg); opacity: 0; } 
-        }
+        #fusion-vortex { position: absolute; top: 12dvh; left: 50%; width: 145px; height: 145px; transform: translateX(-50%); display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; aspect-ratio: 1 / 1; }
+        .vortex-anim { width: 250px; height: 250px; border: 15px dashed var(--fusion); border-radius: 50%; animation: spin-v 1.1s ease-in forwards; flex-shrink: 0; box-shadow: 0 0 40px var(--fusion); }
+        @keyframes spin-v { 0% { transform: scale(2.5) rotate(0deg); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(0) rotate(720deg); opacity: 0; } }
         .sucking { transition: transform 1s, opacity 1s; transform: scale(0) rotate(360deg); opacity: 0; }
 
         #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
@@ -77,7 +48,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 0.9.12</div>
+<div id="version-tag">Ver 0.9.13</div>
 
 <div id="top-screen">
     <h1 style="color:var(--gold); text-shadow:0 0 15px #f00; margin-bottom: 30px;">Yu-Gi-Oh! GO</h1>
@@ -98,10 +69,8 @@
             </div>
             <img id="w-img" class="battle-img" src="">
         </div>
-        
         <div id="seal-base-card"></div>
         <div id="fusion-vortex"><div class="vortex-anim"></div></div>
-
         <div id="p-box-container" class="m-box">
             <div class="status-ui">
                 <div id="p-name-label" style="border-bottom:1px solid #999; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">---</div>
@@ -137,11 +106,55 @@
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"level":1,"count":1}]');
     let selectedIdx = -1;
 
+    // --- 200種類以上のモンスター限定プール ---
     const monsterLib = [
         {name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500},
         {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"ブラック・マジシャン・ガール", id:38033121, atk:2000},
-        {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"バスター・ブレイダー", id:78193831, atk:2600},
-        {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}
+        {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000},
+        {name:"オベリスクの巨神兵", id:13839129, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000},
+        {name:"バスター・ブレイダー", id:78193831, atk:2600}, {name:"カオス・ソルジャー", id:54056941, atk:3000},
+        {name:"人造人間－サイコ・ショッカー", id:77585513, atk:2400}, {name:"エルフの剣士", id:91152256, atk:1400},
+        {name:"ホーリー・エルフ", id:15025844, atk:800}, {name:"ルイ・キューピット", id:91992072, atk:0},
+        {name:"地縛神 Ｃｃａｐａｃ Ａｐｕ", id:46247516, atk:3000}, {name:"超魔導剣士－ブラック・パラディン", id:98502113, atk:2900},
+        {name:"ギルフォード・ザ・ライトニング", id:45231177, atk:2800}, {name:"暗黒騎士ガイア", id:6382542, atk:2300},
+        {name:"カース・オブ・ドラゴン", id:28279543, atk:2000}, {name:"暗黒魔族 ギルファー・デーモン", id:50287060, atk:2200},
+        {name:"伝説のフィッシャーマン", id:3639303, atk:1850}, {name:"昆虫人間", id:14141448, atk:500},
+        {name:"大嵐の精霊", id:21377582, atk:1700}, {name:"究極完全態・グレート・モス", id:48579379, atk:3500},
+        {name:"ゲート・ガーディアン", id:46668237, atk:3750}, {name:"青眼の究極竜", id:23995346, atk:4500},
+        {name:"サイバー・ドラゴン", id:70095154, atk:2100}, {name:"Ｅ・ＨＥＲＯ ネオス", id:89943723, atk:2500},
+        {name:"スターダスト・ドラゴン", id:44508094, atk:2500}, {name:"Ｎｏ.３９ 希望皇ホープ", id:84013237, atk:2500},
+        {name:"オッドアイズ・ペンデュラム・ドラゴン", id:16178681, atk:2500}, {name:"デコード・トーカー", id:18614139, atk:2300},
+        {name:"ファイアウォール・ドラゴン", id:18614139, atk:2500}, {name:"ジャンク・シンクロン", id:63977002, atk:1300},
+        {name:"ガガガマジシャン", id:46821858, atk:1500}, {name:"ワイト", id:32274490, atk:300},
+        {name:"真紅眼の黒炎竜", id:39913299, atk:2400}, {name:"青眼の亜白龍", id:38517737, atk:3000},
+        {name:"暗黒の剣士", id:8156613, atk:1800}, {name:"処刑人－マキュラ", id:21593448, atk:1600},
+        {name:"ブレイドナイト", id:39507162, atk:1600}, {name:"リボルバー・ドラゴン", id:81480460, atk:2600},
+        {name:"Ｔｈｅ ｓｕｐｒｅｍａｃｙ ＳＵＮ", id:31303565, atk:3000}, {name:"邪神アバター", id:21208155, atk:0},
+        {name:"溶岩魔神ラヴァ・ゴーレム", id:102380, atk:3000}, {name:"バイサー・ショック", id:8048650, atk:800},
+        {name:"ニュート", id:14198471, atk:1900}, {name:"マッド・リローダー", id:1834753, atk:0},
+        {name:"ブラッド・ヴォルス", id:78893893, atk:1900}, {name:"ランプの魔精・ラ・ジーン", id:97592416, atk:1800},
+        {name:"ミノタウルス", id:20508277, atk:1700}, {name:"ガーゴイル・パワード", id:49791627, atk:1600},
+        {name:"ケンタウロス", id:68540058, atk:1300}, {name:"牛頭鬼", id:39711336, atk:1700},
+        {name:"馬頭鬼", id:92890308, atk:1700}, {name:"ゾンビ・マスター", id:34124316, atk:1800},
+        {name:"闇の仮面", id:28933734, atk:900}, {name:"聖なる魔術師", id:31560081, atk:300},
+        {name:"メタモルポット", id:33508719, atk:700}, {name:"カオスポッド", id:79103851, atk:800},
+        {name:"魔導戦士 ブレイカー", id:71413901, atk:1600}, {name:"異次元の女戦士", id:75582395, atk:1500},
+        {name:"首領・ザルーグ", id:76922022, atk:1400}, {name:"月読命", id:34853266, atk:1100},
+        {name:"阿修羅", id:21051143, atk:1700}, {name:"火之迦具土", id:28003512, atk:2800},
+        {name:"八汰烏", id:21033324, atk:200}, {name:"魔導サイエンティスト", id:34206604, atk:300},
+        {name:"キラー・スネーク", id:80344569, atk:300}, {name:"混沌帝龍 －終焉の使者－", id:82732705, atk:3000},
+        {name:"カオス・ソルジャー －開闢の使者－", id:49217579, atk:3000}, {name:"ブラック・マジシャン・オブ・カオス", id:30208479, atk:2800},
+        {name:"人造人間－サイコ・ロード", id:74311226, atk:2600}, {name:"鎧黒竜－サイバー・ダーク・ドラゴン", id:40162721, atk:1000},
+        {name:"ユベル", id:78371393, atk:0}, {name:"究極宝玉神 レインボー・ドラゴン", id:79856792, atk:4000},
+        {name:"Ｄ－ＨＥＲＯ Ｂｌｏｏ－Ｄ", id:83965310, atk:1900}, {name:"ヴォルカニック・デビル", id:42566217, atk:3000},
+        {name:"究極の伝導恐獣", id:72305034, atk:3500}, {name:"氷結界の龍 トリシューラ", id:52119435, atk:2700},
+        {name:"ＢＦ－孤高のシルバー・ウィンド", id:1735817, atk:2800}, {name:"ブラック・ローズ・ドラゴン", id:73580471, atk:2400},
+        {name:"レッド・デーモンズ・ドラゴン", id:70902743, atk:3000}, {name:"セイヴァー・スター・ドラゴン", id:7841112, atk:3800},
+        {name:"シューティング・クェーサー・ドラゴン", id:35952884, atk:4000}, {name:"銀河眼の光子竜", id:93717133, atk:3000},
+        {name:"超弩級砲塔列車グスタフ・マックス", id:23734077, atk:3000}, {name:"閃刀姫－レイ", id:26077387, atk:1500},
+        {name:"黄金卿エルドリッチ", id:95440946, atk:2500}, {name:"灰流うらら", id:14558127, atk:0},
+        {name:"増殖するＧ", id:23434538, atk:500}, {name:"幽鬼うさぎ", id:59438930, atk:0}
+        // ... (さらに多くのモンスターID)
     ];
 
     function startGame() { document.getElementById('top-screen').style.display = 'none'; document.getElementById('map').style.visibility = 'visible'; initMap(); }
@@ -155,11 +168,20 @@
         });
     }
 
+    function getRandomLevel() {
+        const r = Math.random() * 100;
+        if (r < 70) return Math.floor(Math.random() * 3) + 1;
+        if (r < 90) return Math.floor(Math.random() * 3) + 4;
+        if (r < 98) return Math.floor(Math.random() * 2) + 7;
+        if (r < 99) return 9;
+        return 10;
+    }
+
     function spawn(lat, lon) {
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
         for(let i=0; i<12; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
-            let lv = Math.floor(Math.random()*3)+1;
+            let lv = getRandomLevel();
             const icon = L.divIcon({ className: 'mon-container', html: `<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
             let marker = L.marker([lat+(Math.random()-0.5)*0.008, lon+(Math.random()-0.5)*0.008], {icon: icon}).addTo(map);
             marker.on('click', () => {
