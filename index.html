@@ -19,20 +19,29 @@
         #deck-btn-ui { bottom: 40px; left: 20px; }
         #gps-btn-ui { bottom: 40px; right: 20px; font-size: 24px; }
         
-        /* --- バトル画面：レイアウト完全センタリング --- */
+        /* --- トップ画面：カードイラスト追加 --- */
+        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
+        .top-title { color:var(--gold); text-shadow:0 0 15px #f00; margin-bottom: 20px; font-size: 2.5rem; }
+        .top-cards-container { display: flex; gap: 20px; align-items: center; margin-bottom: 40px; }
+        .top-card-img { width: 100px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        .start-btn { padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; font-size: 1.1rem; }
+
+        /* --- バトル画面：カードイラストを中央へ、ステータスを隣へ --- */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
-        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px 5px; gap: 20px; }
+        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px 5px; gap: 20px; position: relative; }
         
-        .m-row { width: 100%; display: flex; align-items: center; justify-content: center; height: 30dvh; position: relative; }
+        /* カードとステータスを横に並べるボックス */
+        .m-row { width: 100%; display: flex; align-items: center; justify-content: center; height: 30dvh; position: relative; gap: 10px; }
         .battle-img { height: 100%; width: auto; max-width: 45%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; transition: transform 1s, opacity 1s; }
         
-        .status-ui { width: 135px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 8px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; margin-left: 10px; }
+        /* ステータスUIを右側に固定 */
+        .status-ui { width: 135px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 8px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
         .st-name { border-bottom: 1px solid #999; margin-bottom: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
         .hp-bar-bg { width: 100%; height: 10px; background: #ccc; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid #777; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
         .hp-num { text-align: right; font-size: 11px; margin-top: 3px; font-family: monospace; }
 
-        /* --- 封印演出：中心軸を物理的に一致 --- */
+        /* 封印演出の中心をイラストに合わせる */
         #seal-base-card { position: absolute; height: 25dvh; width: calc(25dvh * 0.68); background: #3c2415; border: 3px solid var(--gold); border-radius: 5px; display: none; z-index: 9400; box-shadow: 0 0 30px var(--fusion); pointer-events: none; }
         #fusion-vortex { position: absolute; width: 200px; height: 200px; display: none; z-index: 9500; align-items: center; justify-content: center; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 12px dashed var(--fusion); border-radius: 50%; animation: spin-v 1.1s ease-in forwards; box-shadow: inset 0 0 20px var(--fusion); }
@@ -45,7 +54,6 @@
         .btn-chance { animation: blink-btn 0.6s infinite alternate; border: 3px solid #ff8c00 !important; background: #fff !important; color: #ff8c00 !important; box-shadow: 0 0 15px #ff8c00; }
         @keyframes blink-btn { from { opacity: 1; transform: scale(1); } to { opacity: 0.7; transform: scale(1.05); } }
 
-        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
         .card-box { border: 1px solid #444; padding: 5px; background: #111; text-align: center; }
@@ -54,11 +62,15 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 0.9.15</div>
+<div id="version-tag">Ver 0.9.16</div>
 
 <div id="top-screen">
-    <h1 style="color:var(--gold); text-shadow:0 0 15px #f00; margin-bottom: 30px;">Yu-Gi-Oh! GO</h1>
-    <button style="padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer;" onclick="startGame()">闇のゲームを開始</button>
+    <h1 class="top-title">Yu-Gi-Oh! GO</h1>
+    <div class="top-cards-container">
+        <img class="top-card-img" src="https://images.ygoprodeck.com/images/cards/46986414.jpg" alt="ブラック・マジシャン">
+        <img class="top-card-img" src="https://images.ygoprodeck.com/images/cards/89631139.jpg" alt="青眼の白龍">
+    </div>
+    <button class="start-btn" onclick="startGame()">闇のゲームを開始</button>
 </div>
 
 <div id="map"></div>
@@ -175,18 +187,37 @@
             updateUI();
             if(bData.e.hp <= 0) { document.getElementById('msg-text').innerText = "チャンス！カードに封印だ！"; document.getElementById('seal-btn').classList.add('btn-chance'); bData.busy = false; return; }
         } else if(act === 'seal') {
-            document.getElementById('seal-base-card').style.display = 'block';
-            document.getElementById('fusion-vortex').style.display = 'flex';
-            setTimeout(() => { document.getElementById('w-img').classList.add('sucking'); }, 50);
+            // エフェクトの中心を敵カードの位置に設定
+            const eImg = document.getElementById('w-img');
+            const rect = eImg.getBoundingClientRect();
+            const stage = document.querySelector('.battle-stage').getBoundingClientRect();
+            
+            // カードの中心座標を計算
+            const centerX = rect.left + rect.width / 2 - stage.left;
+            const centerY = rect.top + rect.height / 2 - stage.top;
+            
+            // エフェクトパーツの位置を修正
+            const vortex = document.getElementById('fusion-vortex');
+            const baseCard = document.getElementById('seal-base-card');
+            
+            vortex.style.left = `${centerX}px`;
+            vortex.style.top = `${centerY}px`;
+            baseCard.style.left = `${centerX - baseCard.offsetWidth/2}px`;
+            baseCard.style.top = `${centerY - baseCard.offsetHeight/2}px`;
+
+            baseCard.style.display = 'block';
+            vortex.style.display = 'flex';
+            
+            setTimeout(() => { eImg.classList.add('sucking'); }, 50);
             await new Promise(r => setTimeout(r, 1100));
-            document.getElementById('fusion-vortex').style.display = 'none';
-            document.getElementById('seal-base-card').style.display = 'none';
+            vortex.style.display = 'none';
+            baseCard.style.display = 'none';
             if(Math.random() > (bData.e.hp/bData.e.max)) {
                 document.getElementById('pop-card').src = bData.e.img;
                 document.getElementById('success-pop').style.display = 'flex';
                 saveCapture(bData.e); return;
             }
-            document.getElementById('w-img').classList.remove('sucking');
+            eImg.classList.remove('sucking');
             document.getElementById('msg-text').innerText = "失敗！";
         }
         await new Promise(r => setTimeout(r, 800));
