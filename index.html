@@ -24,20 +24,20 @@
         .top-card-img { width: 100px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
         .start-btn { padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; }
 
-        /* --- バトル画面：左右端への平行移動 --- */
+        /* --- バトル画面：カードを中心へ移動 --- */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
         .battle-stage { flex: 1; position: relative; padding: 20px 0; }
-        .m-row { position: absolute; width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; }
+        .m-row { position: absolute; width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; justify-content: center; gap: 10px; }
         
-        /* 相手：右端マージン0、ステータスは左側 */
-        .m-row.wild { top: 10dvh; justify-content: flex-end; padding-right: 0; flex-direction: row-reverse; }
-        /* 自分：左端マージン0、ステータスは右側 */
-        .m-row.player { top: 40dvh; justify-content: flex-start; padding-left: 0; flex-direction: row; }
+        /* 相手：中央配置 */
+        .m-row.wild { top: 10dvh; }
+        /* 自分：中央配置 */
+        .m-row.player { top: 40dvh; }
 
         .battle-img-container { height: 100%; width: 45%; position: relative; display: flex; align-items: center; justify-content: center; }
         .battle-img { height: 100%; width: auto; max-width: 100%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; transition: transform 1s, opacity 1s; }
         
-        .status-ui { width: 130px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; margin: 0 5px; }
+        .status-ui { width: 125px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 6px; border-radius: 6px; color: #111; font-size: 10px; font-weight: bold; }
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
 
@@ -52,6 +52,7 @@
         #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 15px 30px 15px; background: #222; z-index: 9100; }
         .cmd-btn { background: #eee; border: 2px solid #888; border-radius: 8px; font-weight: bold; font-size: 16px; }
         .btn-chance { animation: blink-btn 0.6s infinite alternate; border: 3px solid #ff8c00 !important; background: #fff !important; color: #ff8c00 !important; }
+        @keyframes blink-btn { from { opacity: 1; transform: scale(1); } to { opacity: 0.7; transform: scale(1.05); } }
 
         /* デッキ画面 */
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
@@ -65,7 +66,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.0.5</div>
+<div id="version-tag">Ver 1.0.6</div>
 
 <audio id="bgm" loop></audio>
 
@@ -124,7 +125,7 @@
     <h3 style="text-align:center; color:var(--gold);">DUELIST DECK</h3>
     <div class="deck-header">
         <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px; font-weight:bold;"></div></div>
-        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:10px; border-radius:5px; font-weight:bold; color:#000;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:10px; border-radius:5px; font-weight:bold; color:#000;">⚡ 強化</button></div>
+        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">🔄 交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold; color:#000;">⚡ 強化</button></div>
     </div>
     <div id="deck-grid" class="deck-grid"></div>
     <button onclick="closeDeck()" style="width:100%; padding:15px; background:#444; border:none; border-radius:8px; margin-top:10px; color:white; font-weight:bold;">閉じる</button>
@@ -135,13 +136,13 @@
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"level":1,"count":1}]');
     let selectedIdx = -1;
 
-    // --- BGMランダム再生設定 ---
     const bgmList = ["Overlap.mp3", "KawaitaSakebi.mp3", "WILDDRIVE.mp3"];
     function playRandomBGM() {
         const audio = document.getElementById('bgm');
         const randomSong = bgmList[Math.floor(Math.random() * bgmList.length)];
         audio.src = randomSong;
-        audio.play().catch(e => console.log("Audio auto-play blocked by browser."));
+        audio.volume = 0.3; // 音量を30%に設定
+        audio.play().catch(e => console.log("Audio play blocked."));
     }
 
     const monsterLib = [{name:"青眼の白龍", id:89631139, atk:3000}, {name:"ブラック・マジシャン", id:46986414, atk:2500}, {name:"真紅眼の黒竜", id:74677422, atk:2400}, {name:"デーモンの召喚", id:70781052, atk:2500}, {name:"オシリスの天空竜", id:33731070, atk:4000}, {name:"ラーの翼神竜", id:10000010, atk:4000}];
@@ -150,7 +151,7 @@
         document.getElementById('top-screen').style.display = 'none'; 
         document.getElementById('map').style.visibility = 'visible'; 
         initMap(); 
-        playRandomBGM(); // 開始時にランダム再生
+        playRandomBGM(); 
     }
 
     function initMap() {
