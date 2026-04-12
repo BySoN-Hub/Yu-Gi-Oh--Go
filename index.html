@@ -3,140 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yu-Gi-Oh! GO - 封印の決闘</title>
+    <title>Yu-Gi-Oh! GO</title>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #000; color: white; overflow: hidden; }
-        #map-container { width: 100vw; height: 100vh; background: #1a1a2e; position: relative; }
+        body { margin: 0; font-family: sans-serif; background: #000; color: white; overflow: hidden; text-align: center; }
+        #map-container { width: 100vw; height: 100vh; background: radial-gradient(circle, #1a1a2e, #000); position: relative; }
         
-        /* モンスターのシンボル（マップ上） */
+        /* マップ上のモンスター */
         .monster-icon {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            cursor: pointer;
-            transition: transform 0.3s;
-            filter: drop-shadow(0 0 10px gold);
+            position: absolute; width: 80px; height: 110px;
+            cursor: pointer; transition: transform 0.3s;
+            filter: drop-shadow(0 0 10px gold); border-radius: 5px;
         }
-        .monster-icon:hover { transform: scale(1.2); }
+        .monster-icon:hover { transform: scale(1.2) rotate(5deg); }
 
-        /* 捕獲画面（オーバーレイ） */
+        /* 捕獲画面 */
         #capture-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); display: none;
-            flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.95); display: none;
+            flex-direction: column; align-items: center; justify-content: center; z-index: 100;
         }
 
-        #monster-art { width: 200px; border-radius: 10px; box-shadow: 0 0 30px #fff; margin-bottom: 20px; }
+        #monster-art { width: 220px; border: 2px solid gold; border-radius: 10px; box-shadow: 0 0 30px rgba(255,215,0,0.5); margin: 20px 0; }
         
-        /* 封印カード（捕獲ボタン） */
         #seal-card {
-            width: 80px; height: 120px;
+            width: 100px; height: 150px;
             background: linear-gradient(45deg, #a06000, #ffd700);
-            border: 2px solid #fff; border-radius: 5px;
-            cursor: pointer; position: relative;
-            animation: pulse 1.5s infinite;
+            border: 3px solid #fff; border-radius: 8px;
+            cursor: pointer; animation: pulse 1.5s infinite;
         }
-        @keyframes pulse { 0% {transform:scale(1);} 50% {transform:scale(1.1);} 100% {transform:scale(1);} }
+        @keyframes pulse { 0%, 100% {transform:scale(1);} 50% {transform:scale(1.1);} }
 
-        .info { text-align: center; margin-bottom: 10px; }
-        .btn-close { position: absolute; top: 20px; right: 20px; color: white; font-size: 30px; cursor: pointer; }
+        .btn-close { position: absolute; top: 20px; right: 20px; font-size: 40px; cursor: pointer; color: #ff4560; }
+        #status-msg { position: absolute; top: 10px; width: 100%; color: gold; font-weight: bold; }
     </style>
 </head>
 <body>
 
+<div id="status-msg">モンスター探索中...</div>
+
 <div id="map-container">
-    <div style="position: absolute; bottom: 20px; width: 100%; text-align: center;">
-        <p>歩き回ってモンスターを探せ！（ランダム出現）</p>
     </div>
-</div>
 
 <div id="capture-screen">
     <span class="btn-close" onclick="closeCapture()">&times;</span>
-    <div class="info">
-        <h2 id="m-name">モンスター名</h2>
-        <p id="m-stats">ATK: --- / DEF: ---</p>
-    </div>
+    <h2 id="m-name">モンスター名</h2>
+    <p id="m-stats">ATK: --- / DEF: ---</p>
     <img id="monster-art" src="" alt="">
-    <p>カードをタップして封印せよ！</p>
+    <p>カードをタップして「封印」せよ！</p>
     <div id="seal-card" onclick="attemptCapture()"></div>
 </div>
 
 <script>
-    const API_URL = "https://db.ygoprodeck.com/api/v7/randomcard.php";
     const map = document.getElementById('map-container');
     const captureScreen = document.getElementById('capture-screen');
+    const statusMsg = document.getElementById('status-msg');
     let currentMonster = null;
 
-    // 1. マップにモンスターを出現させる
-    async function spawnMonsterOnMap() {
+    // モンスターをマップに出現させる
+    async function spawnMonster() {
         try {
-            const res = await fetch(API_URL);
+            // ランダムカード取得API（キャッシュ回避のためタイムスタンプ付与）
+            const res = await fetch(`https://db.ygoprodeck.com/api/v7/randomcard.php?t=${Date.now()}`);
+            if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             
             const icon = document.createElement('img');
+            // 画像がない場合はスキップ
+            if(!data.card_images) return spawnMonster();
+
             icon.src = data.card_images[0].image_url_small;
             icon.className = 'monster-icon';
-            
-            // マップ上のランダムな位置に配置
-            icon.style.left = Math.random() * 80 + 10 + "%";
-            icon.style.top = Math.random() * 80 + 10 + "%";
+            icon.style.left = Math.random() * 70 + 15 + "%";
+            icon.style.top = Math.random() * 70 + 15 + "%";
             
             icon.onclick = () => openCapture(data);
             map.appendChild(icon);
-        } catch (e) { console.error("出現エラー", e); }
+            statusMsg.innerText = "周囲にモンスターを確認！";
+        } catch (e) {
+            console.error("取得失敗:", e);
+            statusMsg.innerText = "通信エラー、再試行中...";
+            setTimeout(spawnMonster, 3000); // 3秒後に再試行
+        }
     }
 
-    // 2. 捕獲画面を開く
     function openCapture(monster) {
         currentMonster = monster;
         document.getElementById('m-name').innerText = monster.name;
-        document.getElementById('m-stats').innerText = `ATK: ${monster.atk || 0} / DEF: ${monster.def || 0}`;
+        document.getElementById('m-stats').innerText = `ATK: ${monster.atk ?? '---'} / DEF: ${monster.def ?? '---'}`;
         document.getElementById('monster-art').src = monster.card_images[0].image_url;
         captureScreen.style.display = 'flex';
     }
 
-    // 3. 封印（ゲット）
     function attemptCapture() {
         const card = document.getElementById('seal-card');
-        card.style.animation = "none";
-        card.style.transform = "translateY(-100px) rotateY(720deg)";
-        card.style.transition = "2s";
+        card.style.transition = "1s all";
+        card.style.transform = "scale(0) rotate(720deg)";
 
         setTimeout(() => {
-            alert(`封印成功！ ${currentMonster.name} をカードに収めた！`);
+            alert(`封印完了！\n${currentMonster.name} を手に入れた！`);
             saveToDeck(currentMonster);
-            closeCapture();
-            // マップから消す（簡易的にリロード）
-            location.reload();
+            location.reload(); // マップをリセット
         }, 1000);
     }
 
     function closeCapture() {
         captureScreen.style.display = 'none';
-        const card = document.getElementById('seal-card');
-        card.style.transform = "none";
-        card.style.animation = "pulse 1.5s infinite";
     }
 
-    // デッキ（LocalStorage）に保存
     function saveToDeck(monster) {
         let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
         deck.push({
-            id: monster.id,
             name: monster.name,
             atk: monster.atk,
-            def: monster.def,
-            img: monster.card_images[0].image_url,
-            lv: 1 // 育成用の初期レベル
+            img: monster.card_images[0].image_url
         });
         localStorage.setItem('myDeck', JSON.stringify(deck));
     }
 
-    // 最初の一匹を出現させる
+    // 起動時に3体出現させる
     window.onload = () => {
-        spawnMonsterOnMap();
-        spawnMonsterOnMap();
-        spawnMonsterOnMap();
+        for(let i=0; i<3; i++) {
+            setTimeout(spawnMonster, i * 500);
+        }
     };
 </script>
 
