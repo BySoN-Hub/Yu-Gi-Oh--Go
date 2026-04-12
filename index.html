@@ -8,89 +8,86 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --fusion: #8e44ad; --bg: #050510; }
-        
-        /* 100dvh を使用してSafariのツールバーに対応 */
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100dvh; width: 100vw; color: white; touch-action: manipulation; }
         #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.6); font-size: 10px; color: var(--gold); z-index: 100000; padding: 2px 5px; border-radius: 3px; pointer-events: none; }
 
-        /* マップ・UIボタン */
+        /* マップ・UIボタン（Ver 0.9.6継承） */
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; }
-        .mon-chip { border: 2px solid var(--gold); border-radius: 4px; box-shadow: 0 0 8px rgba(255,215,0,0.5); object-fit: cover; }
+        .mon-chip { border: 2px solid var(--gold); border-radius: 4px; object-fit: cover; }
         .lv-badge { position: absolute; top: -5px; right: -5px; background: #000; color: var(--gold); border: 1px solid var(--gold); font-size: 10px; padding: 1px 3px; border-radius: 3px; font-weight: bold; z-index: 10; }
         .ui-btn { position: fixed; width: 60px; height: 60px; background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); z-index: 1000; display: flex; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 10px var(--gold); }
-        #deck-btn-ui { bottom: 40px; left: 20px; } /* iPhoneのバーを避けるため少し上げ */
+        #deck-btn-ui { bottom: 40px; left: 20px; }
         #gps-btn-ui { bottom: 40px; right: 20px; font-size: 24px; }
         
-        /* --- バトル画面：iPhone最適化レイアウト --- */
+        /* バトル画面 */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 40px 10px 0 10px; gap: 10px; position: relative; }
+        .m-box { width: 100%; display: flex; align-items: center; justify-content: center; height: 30dvh; transition: transform 1.2s, opacity 1.2s, filter 1.2s; }
+        .battle-img { max-height: 25dvh !important; width: auto !important; max-width: 45% !important; border: 2px solid #555; border-radius: 5px; }
         
-        .battle-stage { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 40px 10px 0 10px; gap: 10px; }
-        .m-box { width: 100%; display: flex; align-items: center; justify-content: center; height: 30dvh; }
-        .battle-img { max-height: 25dvh !important; width: auto !important; max-width: 45% !important; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        /* 【新】吸い込まれるアニメーション用クラス */
+        .sucking { transform: scale(0) rotate(720deg); opacity: 0; filter: blur(5px); }
 
         .status-ui { width: 140px; background: rgba(255,255,255,0.92); border: 2px solid #333; padding: 5px; border-radius: 6px; color: #111; font-size: 10px; margin: 0 8px; font-weight: bold; }
-        .hp-bar-bg { width: 100%; height: 7px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 3px; border: 1px solid #777; }
-        .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-        .hp-danger { background: var(--red) !important; }
+        .hp-bar-fill { height: 7px; background: #2ecc71; width: 100%; transition: width 0.3s; border-radius: 4px; }
 
-        /* メッセージとコマンドを少し上に詰める */
         #msg-window { height: 50px; background: #fff; color: #111; margin: 5px 15px; border: 3px solid #555; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; flex-shrink: 0; }
-        #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 15px 30px 15px; background: #222; flex-shrink: 0; } /* 下に余白を設けてSafari対策 */
-        .cmd-btn { background: #eee; border: 2px solid #888; border-radius: 8px; font-weight: bold; font-size: 16px; -webkit-appearance: none; }
+        #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 15px 30px 15px; background: #222; flex-shrink: 0; }
+        .cmd-btn { background: #eee; border: 2px solid #888; border-radius: 8px; font-weight: bold; font-size: 16px; }
 
-        /* デッキ・演出 */
+        /* 【改造】封印演出：吸い込みブラックホール */
+        #fusion-vortex { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.4); display: none; z-index: 9500; align-items: center; justify-content: center; }
+        .vortex-anim { width: 250px; height: 250px; border: 15px dashed var(--fusion); border-radius: 50%; animation: spin-contract 1.2s ease-in forwards; box-shadow: 0 0 50px var(--fusion); }
+        @keyframes spin-contract { 
+            0% { transform: rotate(0deg) scale(2); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: rotate(1080deg) scale(0); opacity: 0; }
+        }
+        /* 封印の土台となるカード枠 */
+        #seal-base-card { position: absolute; width: 120px; height: 175px; background: #3c2415; border: 4px solid var(--gold); border-radius: 8px; display: none; z-index: 9400; box-shadow: 0 0 30px var(--fusion); animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+        #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
+        #pop-card { width: 180px; border: 4px solid #fff; border-radius: 8px; transform: scale(0); transition: 0.5s; }
+        #pop-card.show { transform: scale(1); }
         #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
         .card-box { border: 1px solid #444; padding: 5px; text-align: center; position: relative; background: #111; }
-        .card-box.selected { border: 2px solid var(--gold); background: rgba(255,215,0,0.1); }
         .card-box img { width: 100%; }
-        #fusion-vortex { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: radial-gradient(circle, var(--fusion), transparent); display: none; z-index: 9500; align-items: center; justify-content: center; mix-blend-mode: screen; }
-        .vortex-anim { width: 220px; height: 220px; border: 10px dashed #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg) scale(1.5); } to { transform: rotate(360deg) scale(0); } }
-        #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 999999; }
     </style>
 </head>
 <body>
 
-<div id="version-tag">Ver 0.9.6</div>
+<div id="version-tag">Ver 0.9.7</div>
 
 <div id="top-screen">
     <h1 style="color:var(--gold); text-shadow:0 0 15px #f00; margin-bottom: 30px;">Yu-Gi-Oh! GO</h1>
-    <button style="padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; -webkit-appearance: none;" onclick="startGame()">闇のゲームを開始</button>
+    <button style="padding:15px 30px; background:#000; color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer;" onclick="startGame()">闇のゲームを開始</button>
 </div>
 
 <div id="map"></div>
 <div id="deck-btn-ui" class="ui-btn" onclick="openDeck()">DECK</div>
 <div id="gps-btn-ui" class="ui-btn" onclick="refreshGPS()">🛰️</div>
 
-<div id="deck-screen">
-    <h3 style="text-align:center; color:var(--gold); margin-top: 20px;">DECK</h3>
-    <div style="display:flex; align-items:center; justify-content:space-around; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid var(--cyan); margin-bottom:10px;">
-        <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px;"></div></div>
-        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold; -webkit-appearance: none;">交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold; -webkit-appearance: none;">強化</button></div>
-    </div>
-    <div id="deck-grid" class="deck-grid"></div>
-    <button onclick="closeDeck()" style="width:100%; padding:15px; background:#444; border:none; border-radius:8px; margin: 10px 0 20px 0; color:white; font-weight:bold; -webkit-appearance: none;">閉じる</button>
-</div>
-
 <div id="battle-screen">
     <div class="battle-stage">
-        <div class="m-box">
+        <div id="w-box-container" class="m-box">
             <div class="status-ui">
-                <div id="w-name-label" style="border-bottom:1px solid #999; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">---</div>
+                <div id="w-name-label" style="border-bottom:1px solid #999;">---</div>
                 <div id="w-stat-label" style="font-size:9px;">Lv.1 ATK:0</div>
-                <div class="hp-bar-bg"><div id="w-hp-fill" class="hp-bar-fill"></div></div>
-                <div style="text-align:right; font-size:9px;">HP:<span id="w-hp-now">0</span></div>
+                <div style="height:7px; background:#ccc; border-radius:4px; overflow:hidden;"><div id="w-hp-fill" class="hp-bar-fill"></div></div>
             </div>
             <img id="w-img" class="battle-img" src="">
         </div>
+        
+        <div id="seal-base-card"></div>
+
         <div class="m-box">
             <div class="status-ui">
-                <div id="p-name-label" style="border-bottom:1px solid #999; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">---</div>
+                <div id="p-name-label" style="border-bottom:1px solid #999;">---</div>
                 <div id="p-stat-label" style="font-size:9px;">Lv.1 ATK:0</div>
-                <div class="hp-bar-bg"><div id="p-hp-fill" class="hp-bar-fill"></div></div>
-                <div style="text-align:right; font-size:9px;">HP:<span id="p-hp-now">0</span></div>
+                <div style="height:7px; background:#ccc; border-radius:4px; overflow:hidden;"><div id="p-hp-fill" class="hp-bar-fill"></div></div>
             </div>
             <img id="p-img" class="battle-img" src="" style="border:2px solid var(--cyan);">
         </div>
@@ -105,7 +102,17 @@
 </div>
 
 <div id="fusion-vortex"><div class="vortex-anim"></div></div>
-<div id="success-pop" onclick="finishSeal()"><h1 style="color:var(--gold)">封印成功！！</h1><img id="pop-card" style="width:180px; border:4px solid #fff; border-radius:8px;"><p style="margin-top:10px;">タップで戻る</p></div>
+<div id="success-pop" onclick="finishSeal()"><h1 style="color:var(--gold)">封印成功！！</h1><img id="pop-card" src=""><p style="margin-top:10px;">タップで戻る</p></div>
+
+<div id="deck-screen">
+    <h3 style="text-align:center; color:var(--gold); margin-top: 20px;">DECK</h3>
+    <div style="display:flex; align-items:center; justify-content:space-around; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; border:1px solid var(--cyan); margin-bottom:10px;">
+        <div style="text-align:center;"><img id="main-mon-img" style="width:90px; border:2px solid var(--gold);"><div id="main-mon-stat" style="font-size:10px;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:5px;"><button onclick="executeSwap()" style="background:var(--cyan); border:none; padding:8px; border-radius:5px; font-weight:bold;">交代</button><button onclick="executeEnhance()" style="background:var(--gold); border:none; padding:8px; border-radius:5px; font-weight:bold;">強化</button></div>
+    </div>
+    <div id="deck-grid" class="deck-grid"></div>
+    <button onclick="closeDeck()" style="width:100%; padding:15px; background:#444; border:none; border-radius:8px; margin: 10px 0 20px 0; color:white; font-weight:bold;">閉じる</button>
+</div>
 
 <script>
     let map, bData = { p: null, e: null, busy: false }, currentMarker;
@@ -130,21 +137,12 @@
         });
     }
 
-    function getRandomLevel() {
-        const r = Math.random() * 100;
-        if (r < 70) return Math.floor(Math.random() * 3) + 1;
-        if (r < 90) return Math.floor(Math.random() * 3) + 4;
-        if (r < 98) return Math.floor(Math.random() * 2) + 7;
-        if (r < 99) return 9;
-        return 10;
-    }
-
     function spawn(lat, lon) {
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
         for(let i=0; i<12; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
-            let lv = getRandomLevel();
-            const icon = L.divIcon({ className: 'mon-container', html: `<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40], iconAnchor: [20, 20] });
+            let lv = Math.floor(Math.random()*3)+1;
+            const icon = L.divIcon({ className: 'mon-container', html: `<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
             let marker = L.marker([lat+(Math.random()-0.5)*0.008, lon+(Math.random()-0.5)*0.008], {icon: icon}).addTo(map);
             marker.on('click', () => {
                 const total = m.atk * lv;
@@ -152,8 +150,9 @@
                 bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
                 currentMarker = marker;
                 document.getElementById('battle-screen').style.display = 'flex';
+                document.getElementById('w-box-container').classList.remove('sucking'); // リセット
                 updateUI();
-                document.getElementById('msg-text').innerText = `${m.name} (Lv.${lv}) が現れた！`;
+                document.getElementById('msg-text').innerText = `${m.name} が現れた！`;
             });
         }
     }
@@ -161,12 +160,9 @@
     function updateUI() {
         const set = (p, d) => {
             document.getElementById(`${p}-name-label`).innerText = d.name;
-            document.getElementById(`${p}-stat-label`).innerText = `Lv.${d.lv||d.level||1} ATK:${d.atk}`;
+            document.getElementById(`${p}-stat-label`).innerText = `Lv.${d.lv||1} ATK:${d.atk}`;
             document.getElementById(`${p}-hp-now`).innerText = Math.floor(d.hp);
-            const fill = document.getElementById(`${p}-hp-fill`);
-            const per = (d.hp/d.max*100);
-            fill.style.width = per + '%';
-            fill.classList.toggle('hp-danger', per <= 30);
+            document.getElementById(`${p}-hp-fill`).style.width = (d.hp/d.max*100) + '%';
             document.getElementById(`${p}-img`).src = d.img;
         };
         set('w', bData.e); set('p', bData.p);
@@ -175,31 +171,45 @@
     async function battleTurn(act) {
         if(bData.busy) return; bData.busy = true;
         if(act === 'attack') {
-            document.getElementById('msg-text').innerText = `${bData.p.name}の攻撃！`;
+            document.getElementById('msg-text').innerText = "攻撃！";
             await new Promise(r => setTimeout(r, 600));
             bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk);
             updateUI();
             if(bData.e.hp <= 0) { document.getElementById('msg-text').innerText = "チャンス！"; bData.busy = false; return; }
         } else if(act === 'seal') {
+            document.getElementById('msg-text').innerText = "封印発動！！";
+            // 【演出開始】
+            document.getElementById('seal-base-card').style.display = 'block';
             document.getElementById('fusion-vortex').style.display = 'flex';
+            
+            // モンスターが吸い込まれる
+            setTimeout(() => { document.getElementById('w-box-container').classList.add('sucking'); }, 100);
+
             await new Promise(r => setTimeout(r, 1200));
             document.getElementById('fusion-vortex').style.display = 'none';
+            document.getElementById('seal-base-card').style.display = 'none';
+            
             if(Math.random() > (bData.e.hp/bData.e.max)) {
                 document.getElementById('pop-card').src = bData.e.img;
                 document.getElementById('success-pop').style.display = 'flex';
-                let exist = myDeck.find(d => d.id === bData.e.id);
-                if(exist) exist.count++; else myDeck.push({...bData.e, count:1, level:1, uid:Date.now()});
-                localStorage.setItem('myDeck', JSON.stringify(myDeck));
-                return;
+                setTimeout(() => document.getElementById('pop-card').classList.add('show'), 100);
+                saveCapture(bData.e); return;
             }
+            document.getElementById('w-box-container').classList.remove('sucking');
             document.getElementById('msg-text').innerText = "失敗！";
         }
         await new Promise(r => setTimeout(r, 800));
-        document.getElementById('msg-text').innerText = `${bData.e.name}の反撃！`;
         bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk*0.4));
         updateUI();
         if(bData.p.hp <= 0) { alert("敗北..."); closeBattleUI(); }
         bData.busy = false;
+    }
+
+    function saveCapture(m) {
+        let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
+        let exist = deck.find(d => d.id === m.id);
+        if(exist) exist.count++; else deck.push({...m, count:1, level:1, uid:Date.now()});
+        localStorage.setItem('myDeck', JSON.stringify(deck));
     }
 
     function openDeck() { document.getElementById('deck-screen').style.display = 'flex'; renderDeck(); }
@@ -210,8 +220,7 @@
         const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
         myDeck.forEach((m, i) => {
             if(i === 0) return;
-            grid.innerHTML += `<div class="card-box ${selectedIdx === i ? 'selected' : ''}" onclick="selectedIdx=${i};renderDeck();">
-                ${m.count>1?`<div class="stock-badge">×${m.count}</div>`:''}<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg"></div>`;
+            grid.innerHTML += `<div class="card-box" onclick="selectedIdx=${i};renderDeck();"><img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg"></div>`;
         });
     }
     function executeSwap() {
