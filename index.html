@@ -7,47 +7,45 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; }
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100vh; color: white; }
+        :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --fusion: #8e44ad; }
+        body { margin: 0; padding: 0; background: #000; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; color: white; }
         #map { width: 100%; height: 100%; position: absolute; z-index: 1; }
         
-        /* バトル画面 */
+        /* --- バトル画面 --- */
         #battle-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, #1a1a2e, #000);
+            background: radial-gradient(circle, #1a1a3e, #000);
             display: none; flex-direction: column; z-index: 2000;
         }
-        .battle-stage { flex: 2; position: relative; display: flex; flex-direction: column; justify-content: space-around; padding: 10px; }
+        .battle-stage { flex: 2; position: relative; display: flex; flex-direction: column; justify-content: space-between; padding: 40px 20px; }
         .m-box { width: 45%; text-align: center; position: relative; }
         .m-box.wild { align-self: flex-end; }
         .m-box.player { align-self: flex-start; }
-        .battle-img { width: 110px; border-radius: 5px; border: 2px solid #555; background: #000; }
+        .battle-img { width: 110px; border-radius: 5px; border: 2px solid #555; background: #000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
-        /* ステータスバー */
-        .s-bar { position: absolute; width: 150px; background: rgba(255,255,255,0.9); border: 2px solid #333; padding: 5px; border-radius: 8px 0 8px 0; color: #111; font-weight: bold; font-size: 12px; }
-        .s-bar.wild { top: 10px; left: 10px; }
-        .s-bar.player { bottom: 10px; right: 10px; }
-        .hp-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; margin-top: 4px; border: 1px solid #666; }
-        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.5s; }
+        /* ステータスバー（被り回避のため位置調整） */
+        .s-bar { position: absolute; width: 160px; background: rgba(255,255,255,0.95); border: 2px solid #333; padding: 6px; border-radius: 10px 0 10px 0; color: #111; font-weight: bold; font-size: 13px; z-index: 10; }
+        .s-bar.wild { top: -20px; left: -100px; } /* アイコンの左上に配置 */
+        .s-bar.player { bottom: -20px; right: -100px; } /* アイコンの右下に配置 */
+        .hp-bg { width: 100%; height: 10px; background: #ccc; border-radius: 5px; margin-top: 5px; border: 1px solid #666; overflow: hidden; }
+        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.5s, background 0.3s; }
+        .hp-low { background: var(--red) !important; } /* 3割以下の赤 */
 
         /* 下部UI */
-        #msg-window { height: 80px; background: #fff; color: #111; margin: 5px; border: 4px solid #555; border-radius: 10px; padding: 10px; font-size: 1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; text-align: center; }
-        #cmd-grid { height: 120px; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px; background: #333; }
-        .cmd-btn { background: #eee; border: 2px solid #888; color: #111; border-radius: 5px; font-size: 1.1rem; font-weight: bold; }
-        .cmd-btn:disabled { opacity: 0.5; }
+        #msg-window { height: 70px; background: #fff; color: #111; margin: 10px; border: 4px solid #555; border-radius: 10px; padding: 10px; font-size: 1rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        #cmd-grid { height: 110px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; background: #222; }
+        .cmd-btn { background: linear-gradient(#eee, #ccc); border: 2px solid #666; color: #111; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
 
-        /* デッキ・アイコン */
+        /* --- 派手な演出用 --- */
+        #fusion-vortex { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, var(--fusion), transparent); display: none; z-index: 3000; align-items: center; justify-content: center; mix-blend-mode: screen; }
+        .vortex-anim { width: 400px; height: 400px; border: 15px dashed #fff; border-radius: 50%; animation: rotate 0.8s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg) scale(1.5); opacity: 1; } to { transform: rotate(360deg) scale(0); opacity: 0; } }
+        
+        #success-pop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 4000; }
+        #pop-card { width: 250px; border: 5px solid #fff; border-radius: 10px; transform: scale(0); transition: 0.5s cubic-bezier(0.17, 0.89, 0.32, 1.49); box-shadow: 0 0 50px #fff; }
+        #pop-card.show { transform: scale(1); }
+
         #deck-btn { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; background: rgba(0,0,0,0.8); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); font-weight: bold; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-
-        /* デッキ画面 */
-        #deck-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #050510; display:none; z-index: 4000; padding: 20px; box-sizing: border-box; flex-direction: column; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px; overflow-y: auto; flex: 1; }
-        .card-box { border: 2px solid #333; padding: 5px; border-radius: 5px; text-align: center; position: relative; transition: 0.2s; }
-        .card-box.is-battle { border-color: var(--cyan); box-shadow: 0 0 10px var(--cyan); background: rgba(0,255,255,0.1); }
-        .card-box.selected { border-color: var(--gold); background: rgba(255,215,0,0.2); }
-        .card-box img { width: 100%; border-radius: 3px; }
-        .stock-badge { position: absolute; top: -5px; right: -5px; background: var(--red); color: white; border-radius: 10px; padding: 2px 6px; font-size: 10px; }
-        .btn-ui { padding: 15px; border: none; font-weight: bold; border-radius: 8px; margin-top: 10px; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -58,37 +56,43 @@
 <div id="battle-screen">
     <div class="battle-stage">
         <div class="m-box wild">
-            <div class="s-bar wild"><div id="w-name">野生</div><div class="hp-bg"><div id="w-hp-bar" class="hp-fill"></div></div></div>
+            <div class="s-bar wild">
+                <div id="w-name">野生</div>
+                <div class="hp-bg"><div id="w-hp-bar" class="hp-fill"></div></div>
+            </div>
             <img id="w-img" class="battle-img" src="">
         </div>
         <div class="m-box player">
-            <div class="s-bar player"><div id="p-name">自分</div><div class="hp-bg"><div id="p-hp-bar" class="hp-fill"></div></div></div>
+            <div class="s-bar player">
+                <div id="p-name">自分</div>
+                <div class="hp-bg"><div id="p-hp-bar" class="hp-fill"></div></div>
+            </div>
             <img id="p-img" class="battle-img" src="">
         </div>
     </div>
     <div id="msg-window"><div id="msg-text"></div></div>
     <div id="cmd-grid">
-        <button id="btn-atk" class="cmd-btn" onclick="handleTurn('attack')">こうげき</button>
-        <button id="btn-seal" class="cmd-btn" onclick="handleTurn('seal')">ほういん</button>
-        <button class="cmd-btn" onclick="endBattle('逃げ出した！')">にげる</button>
+        <button id="btn-atk" class="cmd-btn" onclick="handleTurn('attack')">攻撃</button>
+        <button id="btn-seal" class="cmd-btn" onclick="handleTurn('seal')">封印</button>
+        <button class="cmd-btn" onclick="location.reload()">逃げる</button>
         <button class="cmd-btn" onclick="openDeck()">交代</button>
     </div>
 </div>
 
-<div id="deck-screen">
-    <h3 style="text-align:center; color:var(--gold);">デッキ編成</h3>
-    <div id="deck-grid" class="grid"></div>
-    <button id="select-battle-btn" onclick="setAsBattleMonster()" style="display:none; background:var(--cyan);" class="btn-ui">このモンスターで戦う</button>
-    <button onclick="closeDeck()" style="background:#444; color:white;" class="btn-ui">閉じる</button>
+<div id="fusion-vortex"><div class="vortex-anim"></div></div>
+<div id="success-pop" onclick="location.reload()">
+    <h1 style="color:var(--gold); text-shadow: 0 0 20px #f00; font-size: 3rem; margin-bottom: 20px;">封印成功！！</h1>
+    <img id="pop-card" src="">
+    <h2 style="margin-top:20px; color:white;">ガッチャ！楽しいデュエルだったぜ！</h2>
+    <p style="color:#aaa;">(画面タップでマップへ戻る)</p>
 </div>
 
 <script>
     let map, currentMarker;
     let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"クリボー","img":"https://images.ygoprodeck.com/images/cards/40640057.jpg","atk":300,"hp":100,"maxHp":100,"level":1,"uid":1,"count":1}]');
-    let battleData = { p: null, e: null, isBusy: false };
-    let tempSelectedIdx = -1;
+    let bData = { p: null, e: null, busy: false };
 
-    // 初期位置
+    // 位置情報取得
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(pos => {
             map = L.map('map', {zoomControl:false}).setView([pos.coords.latitude, pos.coords.longitude], 17);
@@ -100,18 +104,18 @@
 
     function spawn(lat, lon) {
         const pool = [
-            {name:"青眼の白龍", img:"https://images.ygoprodeck.com/images/cards/89631139.jpg", atk:800},
-            {name:"ブラック・マジシャン", img:"https://images.ygoprodeck.com/images/cards/46986414.jpg", atk:600},
-            {name:"真紅眼の黒竜", img:"https://images.ygoprodeck.com/images/cards/74677422.jpg", atk:500}
+            {name:"青眼の白龍", img:"https://images.ygoprodeck.com/images/cards/89631139.jpg", atk:3000},
+            {name:"ブラック・マジシャン", img:"https://images.ygoprodeck.com/images/cards/46986414.jpg", atk:2500},
+            {name:"真紅眼の黒竜", img:"https://images.ygoprodeck.com/images/cards/74677422.jpg", atk:2400}
         ];
-        for(let i=0; i<10; i++) {
+        for(let i=0; i<12; i++) {
             let m = pool[Math.floor(Math.random()*pool.length)];
             let marker = L.marker([lat+(Math.random()-0.5)*0.006, lon+(Math.random()-0.5)*0.006], {
                 icon: L.icon({iconUrl: m.img, iconSize:[50,70]})
             }).addTo(map);
             marker.on('click', () => {
-                battleData.e = {...m, hp: 100, maxHp: 100};
-                battleData.p = {...myDeck[0], hp: 100, maxHp: 100}; // デッキの1番目が戦う
+                bData.e = {...m, hp: 100, max: 100};
+                bData.p = {...myDeck[0], hp: 100, max: 100};
                 currentMarker = marker;
                 document.getElementById('battle-screen').style.display = 'flex';
                 updateUI();
@@ -121,103 +125,70 @@
     }
 
     function updateUI() {
-        document.getElementById('w-name').innerText = battleData.e.name;
-        document.getElementById('w-img').src = battleData.e.img;
-        document.getElementById('w-hp-bar').style.width = (battleData.e.hp / battleData.e.maxHp * 100) + '%';
-        document.getElementById('p-name').innerText = battleData.p.name;
-        document.getElementById('p-img').src = battleData.p.img;
-        document.getElementById('p-hp-bar').style.width = (battleData.p.hp / battleData.p.maxHp * 100) + '%';
+        const wFill = document.getElementById('w-hp-bar');
+        const pFill = document.getElementById('p-hp-bar');
+        
+        document.getElementById('w-name').innerText = bData.e.name;
+        document.getElementById('w-img').src = bData.e.img;
+        let wPer = (bData.e.hp / bData.e.max) * 100;
+        wFill.style.width = wPer + '%';
+        wFill.classList.toggle('hp-low', wPer <= 30); // 30%以下で赤
+
+        document.getElementById('p-name').innerText = bData.p.name;
+        document.getElementById('p-img').src = bData.p.img;
+        let pPer = (bData.p.hp / bData.p.max) * 100;
+        pFill.style.width = pPer + '%';
+        pFill.classList.toggle('hp-low', pPer <= 30); // 30%以下で赤
     }
 
-    function setMsg(txt) { document.getElementById('msg-text').innerText = txt; }
+    function setMsg(t) { document.getElementById('msg-text').innerText = t; }
 
-    async function handleTurn(action) {
-        if(battleData.isBusy) return;
-        battleData.isBusy = true;
-        if(action === 'attack') {
-            setMsg(`${battleData.p.name} の こうげき！`);
+    async function handleTurn(act) {
+        if(bData.busy) return;
+        bData.busy = true;
+        
+        if(act === 'attack') {
+            setMsg(`${bData.p.name} の こうげき！`);
             await wait(800);
-            battleData.e.hp = Math.max(0, battleData.e.hp - 35);
+            bData.e.hp = Math.max(0, bData.e.hp - 40);
             updateUI();
-            if(battleData.e.hp <= 0) { setMsg("チャンスだ！"); battleData.isBusy = false; return; }
+            if(bData.e.hp <= 0) { setMsg("封印のチャンスだ！"); bData.busy = false; return; }
         } else {
-            setMsg("封印を試みた！");
-            await wait(800);
-            if(Math.random() > (battleData.e.hp/120)) {
-                setMsg("封印成功！");
-                capture(battleData.e);
+            document.getElementById('fusion-vortex').style.display = 'flex';
+            setMsg("封印カードを展開！");
+            await wait(1500);
+            document.getElementById('fusion-vortex').style.display = 'none';
+            if(Math.random() > (bData.e.hp/130)) {
+                success(bData.e);
                 return;
             }
-            setMsg("失敗！");
+            setMsg("失敗！封印しきれない！");
         }
-        // 敵の反撃
+
         await wait(800);
-        setMsg(`${battleData.e.name} の 反撃！`);
-        battleData.p.hp = Math.max(0, battleData.p.hp - 20);
+        setMsg(`${bData.e.name} の 反撃！`);
+        bData.p.hp = Math.max(0, bData.p.hp - 25);
         updateUI();
-        if(battleData.p.hp <= 0) { setMsg("力尽きた..."); await wait(1000); endBattle(); }
-        battleData.isBusy = false;
+        if(bData.p.hp <= 0) { setMsg("力尽きた..."); await wait(1000); location.reload(); }
+        bData.busy = false;
     }
 
-    function capture(enemy) {
-        let exist = myDeck.find(d => d.name === enemy.name);
+    function success(m) {
+        const pop = document.getElementById('success-pop');
+        const card = document.getElementById('pop-card');
+        card.src = m.img;
+        pop.style.display = 'flex';
+        setTimeout(() => card.classList.add('show'), 100);
+        
+        let deck = JSON.parse(localStorage.getItem('myDeck') || '[]');
+        let exist = deck.find(d => d.name === m.name);
         if(exist) exist.count++;
-        else myDeck.push({...enemy, count:1, level:1, uid:Date.now()});
-        localStorage.setItem('myDeck', JSON.stringify(myDeck));
-        setTimeout(() => { map.removeLayer(currentMarker); endBattle(); }, 1000);
+        else deck.push({...m, count:1, level:1, uid:Date.now()});
+        localStorage.setItem('myDeck', JSON.stringify(deck));
     }
 
-    function endBattle() { document.getElementById('battle-screen').style.display = 'none'; }
     function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-    // --- デッキ管理の修正 ---
-    function openDeck() {
-        document.getElementById('deck-screen').style.display = 'flex';
-        tempSelectedIdx = -1;
-        renderDeck();
-    }
-
-    function renderDeck() {
-        const grid = document.getElementById('deck-grid');
-        grid.innerHTML = '';
-        myDeck.forEach((m, i) => {
-            const isBattle = (i === 0);
-            const isSel = (tempSelectedIdx === i);
-            grid.innerHTML += `
-                <div class="card-box ${isBattle?'is-battle':''} ${isSel?'selected':''}" onclick="selectFromDeck(${i})">
-                    ${m.count > 1 ? `<div class="stock-badge">×${m.count}</div>` : ''}
-                    <img src="${m.img}">
-                    <div style="font-size:10px; margin-top:3px;">${m.name}</div>
-                </div>`;
-        });
-        document.getElementById('select-battle-btn').style.display = (tempSelectedIdx > 0) ? 'block' : 'none';
-    }
-
-    function selectFromDeck(i) {
-        tempSelectedIdx = i;
-        renderDeck();
-    }
-
-    function setAsBattleMonster() {
-        if(tempSelectedIdx <= 0) return;
-        // 選んだモンスターを先頭（0番目）に移動
-        const [target] = myDeck.splice(tempSelectedIdx, 1);
-        myDeck.unshift(target);
-        
-        // ローカルストレージに保存
-        localStorage.setItem('myDeck', JSON.stringify(myDeck));
-        
-        alert(`${target.name} を戦闘要員に設定しました！`);
-        tempSelectedIdx = -1;
-        renderDeck();
-        // バトル中ならUIも即時更新
-        if(document.getElementById('battle-screen').style.display === 'flex') {
-            battleData.p = {...myDeck[0], hp: 100, maxHp: 100};
-            updateUI();
-        }
-    }
-
-    function closeDeck() { document.getElementById('deck-screen').style.display = 'none'; }
+    function openDeck() { alert("デッキ画面へ(既存のロジックを呼び出し)"); }
 </script>
 </body>
 </html>
