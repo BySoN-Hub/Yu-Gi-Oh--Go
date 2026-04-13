@@ -34,16 +34,33 @@
         .top-card-img { width: 90px; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.7); }
         .start-btn { padding:15px 40px; background:rgba(0,0,0,0.8); color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; cursor:pointer; font-size: 1.2rem; }
 
+        /* --- バトル画面レイアウト --- */
         #battle-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: radial-gradient(circle, #1a1a3e, #000); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
         .battle-stage { flex: 1; position: relative; padding: 20px 0; }
         .m-row { position: absolute; width: 100%; display: flex; align-items: center; height: 26dvh; box-sizing: border-box; justify-content: center; gap: 10px; }
         .m-row.wild { top: 10dvh; }
         .m-row.player { top: 40dvh; }
+        
         .battle-img-container { height: 100%; width: 45%; position: relative; display: flex; align-items: center; justify-content: center; }
+        
+        /* モンスターイラスト（中間層） */
         .battle-img { height: 100%; width: auto; max-width: 100%; border: 2px solid #555; border-radius: 5px; box-shadow: 0 0 15px rgba(0,0,0,0.5); background: #000; position: relative; z-index: 200; }
-        #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); background-size: 100% 100%; background-position: center; border: 2px solid var(--gold); border-radius: 5px; display: none; z-index: 100; pointer-events: none; }
+        
+        /* --- カード裏面：縦向き修正（最下層） --- */
+        #seal-base-card { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background-image: url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); 
+            background-size: contain; /* 縦横比を崩さず収める */
+            background-repeat: no-repeat;
+            background-position: center; 
+            z-index: 100; display: none; pointer-events: none; 
+        }
+
+        /* 紫の円エフェクト（最上層） */
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; transform: translate(-50%, -50%); display: none; z-index: 300; align-items: center; justify-content: center; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 20px dashed var(--fusion); border-radius: 50%; animation: spin-converge 1.2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; box-shadow: 0 0 100px var(--fusion); }
+        
+        /* 回転吸い込み */
         .sucking { transition: transform 1.2s cubic-bezier(0.1, 0.7, 0.1, 1), opacity 1s !important; transform: scale(0) rotate(1080deg) !important; opacity: 0 !important; }
         @keyframes spin-converge { 0% { transform: scale(4) rotate(0deg); opacity: 0; } 20% { opacity: 0.8; } 100% { transform: scale(0) rotate(1080deg); opacity: 0; } }
 
@@ -51,6 +68,7 @@
         .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
 
+        /* デッキ画面 */
         #deck-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; background: var(--bg); display: none; flex-direction: column; z-index: 99999; padding: 20px; box-sizing: border-box; }
         .deck-header { display: flex; align-items: center; justify-content: space-around; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; border: 1px solid var(--cyan); margin-bottom: 10px; }
         .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 20px; }
@@ -67,12 +85,10 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.2.0</div>
+<div id="version-tag">Ver 1.2.1</div>
 <audio id="bgm" loop></audio>
 
-<div id="loading-screen">
-    <div class="load-text">周辺探索中…</div>
-</div>
+<div id="loading-screen"><div class="load-text">周辺探索中…</div></div>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
@@ -161,28 +177,15 @@
         document.getElementById('top-screen').style.display = 'none'; 
         document.getElementById('loading-screen').style.display = 'flex';
         playRandomBGM(); 
-        
-        // わずかな遅延を置いて初期化することでUIのフリーズを防止
         setTimeout(initMap, 500); 
     }
 
     function initMap() {
-        if (!navigator.geolocation) {
-            alert("位置情報がサポートされていません。");
-            resetUI();
-            return;
-        }
-
         navigator.geolocation.getCurrentPosition(pos => {
             const lat = pos.coords.latitude, lon = pos.coords.longitude;
-            
-            // 地図が未作成の場合のみ作成
             if (!map) {
                 map = L.map('map', {zoomControl:false, fadeAnimation: false, markerZoomAnimation: false}).setView([lat, lon], 17);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(map);
-                
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
                 map.whenReady(() => {
                     spawn(lat, lon);
                     document.getElementById('loading-screen').style.display = 'none';
@@ -190,18 +193,13 @@
                     document.getElementById('deck-btn-ui').style.display = 'flex';
                     document.getElementById('gps-btn-ui').style.display = 'flex';
                 });
-
                 map.on('moveend', () => { spawn(map.getCenter().lat, map.getCenter().lng); });
             }
         }, err => {
             alert("位置情報が取得できません。設定を確認してください。");
-            resetUI();
-        }, { timeout: 8000, enableHighAccuracy: true });
-    }
-
-    function resetUI() {
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('top-screen').style.display = 'flex';
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('top-screen').style.display = 'flex';
+        }, { timeout: 8000 });
     }
 
     function spawn(lat, lon) {
@@ -211,8 +209,6 @@
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
             let lv = Math.floor(Math.random()*10)+1;
             let imgUrl = `https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg`;
-            
-            // 非同期で画像チェックを行い、成功したものだけ表示
             const img = new Image();
             img.onload = () => {
                 const icon = L.divIcon({ className: 'mon-container', html: `<img src="${imgUrl}" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
@@ -227,11 +223,9 @@
         let bonus = (lv - 1) * 1000;
         let totalAtk = m.atk + bonus;
         let initialHP = (totalAtk <= 0) ? 100 + bonus : totalAtk;
-        
         bData.e = { name: m.name, id: m.id, atk: totalAtk, baseAtk: m.atk, hp: initialHP, max: initialHP, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
         bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
         currentMarker = marker;
-        
         document.getElementById('battle-screen').style.display = 'flex';
         document.getElementById('w-img').classList.remove('sucking');
         updateUI();
@@ -258,11 +252,7 @@
             await new Promise(r => setTimeout(r, 600));
             bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk);
             updateUI();
-            if(bData.e.hp <= 0) { 
-                document.getElementById('msg-text').innerText = "チャンス！カードに封印だ！"; 
-                document.getElementById('seal-btn').classList.add('btn-chance');
-                bData.busy = false; return; 
-            }
+            if(bData.e.hp <= 0) { document.getElementById('msg-text').innerText = "チャンス！カードに封印だ！"; document.getElementById('seal-btn').classList.add('btn-chance'); bData.busy = false; return; }
         } else if(act === 'seal') {
             document.getElementById('seal-base-card').style.display = 'block';
             document.getElementById('fusion-vortex').style.display = 'flex';
