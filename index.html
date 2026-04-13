@@ -27,9 +27,9 @@
 
         .overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; z-index: 8000; padding: 20px; box-sizing: border-box; }
 
-        /* バトル画面 */
+        /* バトル画面レイアウト */
         #battle-screen { background: radial-gradient(circle, #1a1a3e, #000); }
-        .battle-stage { flex: 1; position: relative; width: 100%; }
+        .battle-stage { flex: 1; position: relative; width: 100%; overflow: hidden; }
         .m-row { position: absolute; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; height: 26dvh; }
         .m-row.wild { top: 10dvh; }
         .m-row.player { top: 42dvh; }
@@ -44,9 +44,28 @@
         .atk-wild { animation: wild-strike 0.4s ease-in-out; }
         @keyframes wild-strike { 0% { transform: translate(0,0); } 50% { transform: translate(-30px,50px) scale(1.1); } 100% { transform: translate(0,0); } }
 
+        /* 1. 画面シェイクエフェクト */
+        .screen-shake { animation: shake-anim 0.3s linear; }
+        @keyframes shake-anim {
+            0%, 100% { transform: translate(0,0); }
+            10%, 30%, 50%, 70%, 90% { transform: translate(-10px,10px); }
+            20%, 40%, 60%, 80% { transform: translate(10px,-10px); }
+        }
+
+        /* 2. ダメージ数値ポップアップ */
+        .dmg-pop { position: absolute; font-size: 24px; font-weight: bold; color: #ff4d4d; text-shadow: 0 0 10px #000; z-index: 1000; animation: pop-up 0.8s ease-out forwards; pointer-events: none; }
+        @keyframes pop-up { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
+
+        /* 3. ひび割れエフェクト */
+        .crack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('https://i.imgur.com/2U54R5T.png') center/cover; z-index: 250; pointer-events: none; opacity: 0; transition: opacity 0.5s; mix-blend-mode: screen; }
+        .cracked { opacity: 0.8; } /* HP半分以下で表示 */
+
+        /* 4. オノマトペエフェクト */
+        .onomatope { position: absolute; font-size: 40px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #f00, 0 0 20px #f00; z-index: 1500; animation: onomato-pop 0.5s ease-out forwards; pointer-events: none; font-family: 'Comic Sans MS', sans-serif; }
+        @keyframes onomato-pop { 0% { transform: scale(0.5); opacity: 1; } 50% { transform: scale(1.2) rotate(-10deg); } 100% { transform: scale(1) rotate(5deg); opacity: 0; } }
+
         /* 被弾エフェクト */
-        .dmg-flash { animation: flash-red 0.3s; }
-        @keyframes flash-red { 0% { filter: brightness(1); } 50% { filter: brightness(2) sepia(1) hue-rotate(-50deg) saturate(5); } 100% { filter: brightness(1); } }
+        .dmg-flash { filter: brightness(2) sepia(1) hue-rotate(-50deg) saturate(5) !important; transition: filter 0.1s; }
 
         #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image:url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); background-size:contain; background-repeat:no-repeat; background-position:center; z-index: 100; display: none; }
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; margin-left: -150px; margin-top: -150px; display: none; z-index: 1000; pointer-events: none; }
@@ -77,7 +96,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.4.2</div>
+<div id="version-tag">Ver 1.4.3</div>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
@@ -98,12 +117,16 @@
 </div>
 
 <div id="battle-screen" class="overlay-screen">
-    <div class="battle-stage">
+    <div id="battle-stage" class="battle-stage">
+        <div id="onomato-container" style="position:absolute; width:100%; height:100%; z-index:1400; pointer-events:none;"></div>
+        
         <div class="m-row wild">
-            <div class="battle-img-box">
+            <div id="w-img-box" class="battle-img-box">
                 <img id="w-img" class="battle-img">
                 <div id="seal-base-card"></div>
                 <div id="fusion-vortex"><div class="vortex-anim"></div></div>
+                <div id="w-crack" class="crack-overlay"></div>
+                <div id="w-dmg-pop-point" style="position:absolute; top:20%; left:50%;"></div>
             </div>
             <div class="hp-ui">
                 <div id="w-name">---</div>
@@ -119,8 +142,10 @@
                 <div class="hp-bar-bg"><div id="p-hp-bar" class="hp-bar-fill"></div></div>
                 <div id="p-hp-txt" style="text-align:right;">0/0</div>
             </div>
-            <div class="battle-img-box">
+            <div id="p-img-box" class="battle-img-box">
                 <img id="p-img" class="battle-img" style="border-color:var(--cyan);">
+                <div id="p-crack" class="crack-overlay"></div>
+                <div id="p-dmg-pop-point" style="position:absolute; top:20%; left:50%;"></div>
             </div>
         </div>
     </div>
@@ -168,6 +193,8 @@
         {id:44508094, atk:2500, name:"スターダスト・ドラゴン"}, {id:15063914, atk:2000, name:"エルフの剣士"}
     ];
 
+    const onomatoWords = ["ドゴォォン！", "バキィッ！", "ズガァァン！", "ゴフッ！", "滅びの爆裂疾風弾！"];
+
     function startGame() {
         document.getElementById('top-screen').style.display = 'none';
         document.getElementById('loading-screen').style.display = 'flex';
@@ -209,12 +236,60 @@
         bData.e = { ...m, lv, hp, max: hp, atk: enemyAtk, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
         bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
         document.getElementById('battle-screen').style.display = 'flex';
-        document.getElementById('w-img').classList.remove('sucking', 'unsucking', 'atk-wild', 'dmg-flash');
-        document.getElementById('p-img').classList.remove('atk-player', 'dmg-flash');
-        document.getElementById('fusion-vortex').style.display = 'none';
-        document.getElementById('seal-base-card').style.display = 'none';
-        updateBattleUI();
+        
+        // エフェクト初期化
+        document.getElementById('w-img').className = 'battle-img';
+        document.getElementById('p-img').className = 'battle-img';
+        document.getElementById('w-crack').className = 'crack-overlay';
+        document.getElementById('p-crack').className = 'crack-overlay';
         document.getElementById('msg-box').innerText = m.name + " 現る！";
+        
+        updateBattleUI();
+    }
+
+    // ひび割れ更新（ Ver 1.4.3 状態の視覚化）
+    function updateCracks() {
+        if((bData.e.hp / bData.e.max) <= 0.5) {
+            document.getElementById('w-crack').classList.add('cracked');
+        } else {
+            document.getElementById('w-crack').classList.remove('cracked');
+        }
+        if((bData.p.hp / bData.p.max) <= 0.5) {
+            document.getElementById('p-crack').classList.add('cracked');
+        } else {
+            document.getElementById('p-crack').classList.remove('cracked');
+        }
+    }
+
+    // ダメージポップアップ＆オノマトペ（Ver 1.4.3 情報の数値化＆漫画風）
+    function triggerDamageEffects(targetSide, dmgVal) {
+        // 1. 画面シェイク
+        document.getElementById('battle-stage').classList.add('screen-shake');
+        setTimeout(() => document.getElementById('battle-stage').classList.remove('screen-shake'), 300);
+
+        // 2. 被弾フラッシュ
+        const img = document.getElementById(targetSide === 'wild' ? 'w-img' : 'p-img');
+        img.classList.add('dmg-flash');
+        setTimeout(() => img.classList.remove('dmg-flash'), 200);
+
+        // 3. ダメージ数字ポップアップ
+        const point = document.getElementById(targetSide === 'wild' ? 'w-dmg-pop-point' : 'p-dmg-pop-point');
+        const pop = document.createElement('div');
+        pop.className = 'dmg-pop';
+        pop.innerText = "-" + Math.floor(dmgVal);
+        point.appendChild(pop);
+        setTimeout(() => pop.remove(), 800); // アニメ後に削除
+
+        // 4. オノマトペ
+        const container = document.getElementById('onomato-container');
+        const word = document.createElement('div');
+        word.className = 'onomatope';
+        word.innerText = onomatoWords[Math.floor(Math.random() * onomatoWords.length)];
+        // ランダムな位置に出現
+        word.style.left = (20 + Math.random() * 60) + "%";
+        word.style.top = (30 + Math.random() * 40) + "%";
+        container.appendChild(word);
+        setTimeout(() => word.remove(), 500);
     }
 
     function updateBattleUI() {
@@ -223,29 +298,34 @@
         document.getElementById('w-atk').innerText = "ATK: " + bData.e.atk;
         document.getElementById('w-hp-bar').style.width = Math.max(0, (bData.e.hp/bData.e.max)*100) + "%";
         document.getElementById('w-hp-txt').innerText = Math.max(0, Math.floor(bData.e.hp)) + "/" + bData.e.max;
+        
         document.getElementById('p-img').src = bData.p.img;
         document.getElementById('p-name').innerText = bData.p.name;
         document.getElementById('p-atk').innerText = "ATK: " + bData.p.atk;
         document.getElementById('p-hp-bar').style.width = Math.max(0, (bData.p.hp/bData.p.max)*100) + "%";
         document.getElementById('p-hp-txt').innerText = Math.max(0, Math.floor(bData.p.hp)) + "/" + bData.p.max;
+        
+        updateCracks();
     }
 
     async function battleTurn(act) {
         if(bData.busy) return; bData.busy = true;
         if(act === 'attack') {
-            // プレイヤー攻撃演出
+            // プレイヤー攻撃演出開始
             document.getElementById('p-img').classList.add('atk-player');
-            setTimeout(() => {
-                document.getElementById('w-img').classList.add('dmg-flash');
-                bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk);
-                updateBattleUI();
-            }, 200);
-            await new Promise(r => setTimeout(r, 600));
+            await new Promise(r => setTimeout(r, 200)); // ヒットタイミングまで待機
+            
+            // Ver 1.4.3 攻撃フィードバック
+            triggerDamageEffects('wild', bData.p.atk);
+            bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk);
+            updateBattleUI();
+            
+            await new Promise(r => setTimeout(r, 400)); // アニメ終了まで待機
             document.getElementById('p-img').classList.remove('atk-player');
-            document.getElementById('w-img').classList.remove('dmg-flash');
             
             if(bData.e.hp <= 0) { document.getElementById('msg-box').innerText = "チャンス！封印を試みろ！"; bData.busy = false; return; }
         } else if(act === 'seal') {
+            // 封印演出 ( Ver 1.4.0 )
             document.getElementById('seal-base-card').style.display = 'block';
             document.getElementById('fusion-vortex').style.display = 'block';
             document.getElementById('w-img').classList.remove('unsucking');
@@ -257,6 +337,7 @@
                 document.getElementById('success-pop').style.display = 'flex';
                 saveCard(bData.e); bData.busy = false; return;
             }
+            // 失敗・復帰演出 ( Ver 1.4.1 )
             document.getElementById('w-img').classList.remove('sucking');
             document.getElementById('w-img').classList.add('unsucking');
             document.getElementById('fusion-vortex').style.display = 'none';
@@ -265,16 +346,17 @@
             await new Promise(r => setTimeout(r, 800));
         }
         
-        // 敵の反撃演出
+        // 敵の反撃演出開始
         document.getElementById('w-img').classList.add('atk-wild');
-        setTimeout(() => {
-            document.getElementById('p-img').classList.add('dmg-flash');
-            bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk * 0.3));
-            updateBattleUI();
-        }, 200);
-        await new Promise(r => setTimeout(r, 600));
+        await new Promise(r => setTimeout(r, 200)); // ヒットタイミング
+
+        // Ver 1.4.3 被弾フィードバック
+        triggerDamageEffects('player', bData.e.atk * 0.3);
+        bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk * 0.3));
+        updateBattleUI();
+
+        await new Promise(r => setTimeout(r, 400));
         document.getElementById('w-img').classList.remove('atk-wild');
-        document.getElementById('p-img').classList.remove('dmg-flash');
 
         if(bData.p.hp <= 0) { alert("敗北..."); closeBattle(); }
         bData.busy = false;
