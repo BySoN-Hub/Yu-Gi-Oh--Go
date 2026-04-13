@@ -19,15 +19,15 @@
         #shop-btn-ui { bottom: 110px; left: 20px; color: var(--cyan); border-color: var(--cyan); }
         #gps-btn-ui { bottom: 40px; right: 20px; font-size: 24px; }
 
-        /* 画面レイヤー */
-        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.ygoprodeck.com/images/cards/89631139.jpg') center/cover; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9000; }
+        /* トップ */
+        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050510; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9000; }
         #loading-screen { position: fixed; top:0; left:0; width:100%; height:100%; background: #000; display:none; flex-direction:column; align-items:center; justify-content:center; z-index: 9500; }
         .top-title { color:var(--gold); text-shadow:0 0 20px #f00; margin-bottom: 20px; font-size: 2.5rem; font-style: italic; }
         .start-btn { padding:15px 40px; background:rgba(0,0,0,0.9); color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; font-size: 1.2rem; cursor: pointer; }
 
         .overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; z-index: 8000; padding: 20px; box-sizing: border-box; }
 
-        /* バトル画面レイアウト */
+        /* バトル画面 */
         #battle-screen { background: radial-gradient(circle, #1a1a3e, #000); }
         .battle-stage { flex: 1; position: relative; width: 100%; overflow: hidden; }
         .m-row { position: absolute; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; height: 26dvh; }
@@ -37,36 +37,26 @@
         .battle-img-box { position: relative; height: 100%; width: 45%; display: flex; align-items: center; justify-content: center; }
         .battle-img { height: 100%; max-width: 100%; border: 2px solid #555; border-radius: 5px; background: #000; position: relative; z-index: 200; object-fit: contain; }
         
-        /* 攻撃演出アニメーション */
+        /* 攻撃・被弾エフェクト (Ver 1.4.2) */
         .atk-player { animation: player-strike 0.4s ease-in-out; }
         @keyframes player-strike { 0% { transform: translate(0,0); } 50% { transform: translate(30px,-50px) scale(1.1); } 100% { transform: translate(0,0); } }
-        
         .atk-wild { animation: wild-strike 0.4s ease-in-out; }
         @keyframes wild-strike { 0% { transform: translate(0,0); } 50% { transform: translate(-30px,50px) scale(1.1); } 100% { transform: translate(0,0); } }
-
-        /* 1. 画面シェイクエフェクト */
         .screen-shake { animation: shake-anim 0.3s linear; }
-        @keyframes shake-anim {
-            0%, 100% { transform: translate(0,0); }
-            10%, 30%, 50%, 70%, 90% { transform: translate(-10px,10px); }
-            20%, 40%, 60%, 80% { transform: translate(10px,-10px); }
-        }
-
-        /* 2. ダメージ数値ポップアップ */
-        .dmg-pop { position: absolute; font-size: 24px; font-weight: bold; color: #ff4d4d; text-shadow: 0 0 10px #000; z-index: 1000; animation: pop-up 0.8s ease-out forwards; pointer-events: none; }
+        @keyframes shake-anim { 0%, 100% { transform: translate(0,0); } 10%, 30%, 50%, 70%, 90% { transform: translate(-8px,8px); } 20%, 40%, 60%, 80% { transform: translate(8px,-8px); } }
+        .dmg-pop { position: absolute; font-size: 24px; font-weight: bold; color: #ff4d4d; text-shadow: 0 0 10px #000; z-index: 1000; animation: pop-up 0.8s forwards; pointer-events: none; }
         @keyframes pop-up { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
-
-        /* 3. ひび割れエフェクト */
-        .crack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('https://i.imgur.com/2U54R5T.png') center/cover; z-index: 250; pointer-events: none; opacity: 0; transition: opacity 0.5s; mix-blend-mode: screen; }
-        .cracked { opacity: 0.8; } /* HP半分以下で表示 */
-
-        /* 4. オノマトペエフェクト */
-        .onomatope { position: absolute; font-size: 40px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #f00, 0 0 20px #f00; z-index: 1500; animation: onomato-pop 0.5s ease-out forwards; pointer-events: none; font-family: 'Comic Sans MS', sans-serif; }
-        @keyframes onomato-pop { 0% { transform: scale(0.5); opacity: 1; } 50% { transform: scale(1.2) rotate(-10deg); } 100% { transform: scale(1) rotate(5deg); opacity: 0; } }
-
-        /* 被弾エフェクト */
         .dmg-flash { filter: brightness(2) sepia(1) hue-rotate(-50deg) saturate(5) !important; transition: filter 0.1s; }
 
+        /* 1. ひび割れエフェクトの修正（添付画像対応） */
+        .crack-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('https://i.imgur.com/2U54R5T.png') center/cover; z-index: 250; pointer-events: none; opacity: 0; transition: opacity 0.5s; mix-blend-mode: screen; }
+        .cracked { opacity: 1; } /* HP半分以下でガラスの亀裂を表示（文字は出さない） */
+
+        /* 2. オノマトペ（擬音语）の発生位置修正 */
+        .onomatope { position: absolute; font-size: 32px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #f00, 0 0 20px #f00; z-index: 1500; animation: onomato-pop 0.5s ease-out forwards; pointer-events: none; font-family: 'Comic Sans MS', sans-serif; white-space: nowrap; }
+        @keyframes onomato-pop { 0% { transform: scale(0.5); opacity: 1; } 50% { transform: scale(1.2) rotate(-10deg); } 100% { transform: scale(1) rotate(5deg); opacity: 0; } }
+
+        /* 3. 封印演出のタイミング修正用エフェクト */
         #seal-base-card { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image:url('https://images.ygoprodeck.com/images/cards/back_high.jpg'); background-size:contain; background-repeat:no-repeat; background-position:center; z-index: 100; display: none; }
         #fusion-vortex { position: absolute; top: 50%; left: 50%; width: 300px; height: 300px; margin-left: -150px; margin-top: -150px; display: none; z-index: 1000; pointer-events: none; }
         .vortex-anim { width: 100%; height: 100%; border: 15px dashed var(--fusion); border-radius: 50%; animation: spin-v 1.2s forwards cubic-bezier(0.1, 0.7, 0.1, 1); box-shadow: 0 0 80px var(--fusion); box-sizing: border-box; }
@@ -96,7 +86,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.4.3</div>
+<div id="version-tag">Ver 1.4.4</div>
 
 <div id="top-screen">
     <h1 class="top-title">Yu-Gi-Oh! GO</h1>
@@ -118,7 +108,6 @@
 
 <div id="battle-screen" class="overlay-screen">
     <div id="battle-stage" class="battle-stage">
-        <div id="onomato-container" style="position:absolute; width:100%; height:100%; z-index:1400; pointer-events:none;"></div>
         
         <div class="m-row wild">
             <div id="w-img-box" class="battle-img-box">
@@ -247,7 +236,7 @@
         updateBattleUI();
     }
 
-    // ひび割れ更新（ Ver 1.4.3 状態の視覚化）
+    // ひび割れ更新（ HP半分以下でガラスの亀裂を表示）
     function updateCracks() {
         if((bData.e.hp / bData.e.max) <= 0.5) {
             document.getElementById('w-crack').classList.add('cracked');
@@ -261,8 +250,23 @@
         }
     }
 
-    // ダメージポップアップ＆オノマトペ（Ver 1.4.3 情報の数値化＆漫画風）
-    function triggerDamageEffects(targetSide, dmgVal) {
+    // 2. オノマトペの発生位置をダメージを受けたカードの周りに変更
+    function triggerOnomatope(targetSide) {
+        const imgBox = document.getElementById(targetSide === 'wild' ? 'w-img-box' : 'p-img-box');
+        const word = document.createElement('div');
+        word.className = 'onomatope';
+        word.innerText = onomatoWords[Math.floor(Math.random() * onomatoWords.length)];
+        
+        // カードイラストの周りにランダム配置
+        word.style.left = (-20 + Math.random() * 40) + "%"; 
+        word.style.top = (10 + Math.random() * 50) + "%";
+        
+        imgBox.appendChild(word);
+        setTimeout(() => word.remove(), 500);
+    }
+
+    // ダメージポップアップ＆シェイク
+    function triggerDamageFeedback(targetSide, dmgVal) {
         // 1. 画面シェイク
         document.getElementById('battle-stage').classList.add('screen-shake');
         setTimeout(() => document.getElementById('battle-stage').classList.remove('screen-shake'), 300);
@@ -278,18 +282,7 @@
         pop.className = 'dmg-pop';
         pop.innerText = "-" + Math.floor(dmgVal);
         point.appendChild(pop);
-        setTimeout(() => pop.remove(), 800); // アニメ後に削除
-
-        // 4. オノマトペ
-        const container = document.getElementById('onomato-container');
-        const word = document.createElement('div');
-        word.className = 'onomatope';
-        word.innerText = onomatoWords[Math.floor(Math.random() * onomatoWords.length)];
-        // ランダムな位置に出現
-        word.style.left = (20 + Math.random() * 60) + "%";
-        word.style.top = (30 + Math.random() * 40) + "%";
-        container.appendChild(word);
-        setTimeout(() => word.remove(), 500);
+        setTimeout(() => pop.remove(), 800);
     }
 
     function updateBattleUI() {
@@ -313,31 +306,36 @@
         if(act === 'attack') {
             // プレイヤー攻撃演出開始
             document.getElementById('p-img').classList.add('atk-player');
-            await new Promise(r => setTimeout(r, 200)); // ヒットタイミングまで待機
+            await new Promise(r => setTimeout(r, 200)); // ヒットタイミング
             
-            // Ver 1.4.3 攻撃フィードバック
-            triggerDamageEffects('wild', bData.p.atk);
+            // フィードバック
+            triggerDamageFeedback('wild', bData.p.atk);
+            triggerOnomatope('wild'); // オノマトペを敵の周りに
+            
             bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk);
             updateBattleUI();
             
-            await new Promise(r => setTimeout(r, 400)); // アニメ終了まで待機
+            await new Promise(r => setTimeout(r, 400));
             document.getElementById('p-img').classList.remove('atk-player');
             
             if(bData.e.hp <= 0) { document.getElementById('msg-box').innerText = "チャンス！封印を試みろ！"; bData.busy = false; return; }
         } else if(act === 'seal') {
-            // 封印演出 ( Ver 1.4.0 )
+            // 3. 封印演出のタイミング修正（紫エフェクトが最初）
             document.getElementById('seal-base-card').style.display = 'block';
             document.getElementById('fusion-vortex').style.display = 'block';
             document.getElementById('w-img').classList.remove('unsucking');
-            setTimeout(() => document.getElementById('w-img').classList.add('sucking'), 50);
-            await new Promise(r => setTimeout(r, 1200));
+            
+            // 紫エフェクトが出てからモンスター吸い込み開始
+            setTimeout(() => document.getElementById('w-img').classList.add('sucking'), 100);
+            
+            await new Promise(r => setTimeout(r, 1200)); // 吸い込み完了待機
             
             if(Math.random() < 0.4 + (1 - bData.e.hp/bData.e.max)*0.6) {
                 document.getElementById('pop-card').src = bData.e.img;
                 document.getElementById('success-pop').style.display = 'flex';
                 saveCard(bData.e); bData.busy = false; return;
             }
-            // 失敗・復帰演出 ( Ver 1.4.1 )
+            // 失敗・復帰演出
             document.getElementById('w-img').classList.remove('sucking');
             document.getElementById('w-img').classList.add('unsucking');
             document.getElementById('fusion-vortex').style.display = 'none';
@@ -350,8 +348,10 @@
         document.getElementById('w-img').classList.add('atk-wild');
         await new Promise(r => setTimeout(r, 200)); // ヒットタイミング
 
-        // Ver 1.4.3 被弾フィードバック
-        triggerDamageEffects('player', bData.e.atk * 0.3);
+        // フィードバック
+        triggerDamageFeedback('player', bData.e.atk * 0.3);
+        triggerOnomatope('player'); // オノマトペを自分の周りに
+        
         bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk * 0.3));
         updateBattleUI();
 
