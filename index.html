@@ -7,253 +7,125 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --gold: #ffd700; --cyan: #00ffff; --red: #ff4d4d; --fusion: #8e44ad; --bg: #050510; }
-        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100dvh; width: 100vw; color: white; touch-action: manipulation; }
-        #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); font-size: 10px; color: var(--gold); z-index: 10000; padding: 2px 5px; border-radius: 3px; border: 1px solid var(--gold); pointer-events: none; }
-
-        #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; background: #000; }
+        :root { --gold: #ffd700; --cyan: #00ffff; --bg: #050510; }
+        body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100dvh; color: white; }
         
-        .ui-btn { position: fixed; width: 60px; height: 60px; background: rgba(0,0,0,0.85); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); z-index: 500; display: none; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 10px var(--gold); }
-        #deck-btn-ui { bottom: 40px; left: 20px; }
-        #shop-btn-ui { bottom: 110px; left: 20px; color: var(--cyan); border-color: var(--cyan); }
-        #gps-btn-ui { bottom: 40px; right: 20px; overflow: hidden; background: radial-gradient(circle, #444, #000); }
-        #gps-btn-ui img { width: 70%; height: 70%; object-fit: contain; }
+        /* マップとUI */
+        #map { width: 100%; height: 100%; position: absolute; z-index: 1; background: #000; }
+        .ui-btn { position: fixed; width: 60px; height: 60px; background: rgba(0,0,0,0.8); border: 2px solid var(--gold); border-radius: 50%; color: var(--gold); z-index: 500; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+        #deck-btn { bottom: 30px; left: 20px; }
+        #scan-btn { bottom: 30px; right: 20px; background: radial-gradient(circle, #666, #000); overflow: hidden; }
+        #scan-btn img { width: 80%; height: 80%; object-fit: contain; }
 
-        /* マインドスキャン演出修正：サイズと消去 */
-        #mind-scan-overlay { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.8); font-size: 1.8rem; font-weight: bold; color: var(--gold); text-shadow: 0 0 15px #f00; z-index: 20000; opacity: 0; pointer-events: none; transition: all 0.4s ease; display: none; }
-        .mind-scan-active { display: block !important; opacity: 1 !important; transform: translate(-50%, -50%) scale(1.1) !important; }
+        /* マインドスキャン演出（シンプル版） */
+        #scan-msg { 
+            position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 24px; color: var(--gold); font-weight: bold; z-index: 10000;
+            pointer-events: none; opacity: 0; display: none;
+        }
+        @keyframes scan-fade { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); } }
 
-        #top-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #050510; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9000; }
-        .top-title { color:var(--gold); text-shadow:0 0 20px #f00; margin-bottom: 20px; font-size: 2.5rem; font-style: italic; }
-        .start-btn { padding:15px 40px; background:rgba(0,0,0,0.9); color:var(--gold); border:2px solid var(--gold); border-radius:50px; font-weight:bold; font-size: 1.2rem; cursor: pointer; }
+        /* トップ画面 */
+        #top-screen { position: fixed; inset: 0; background: #050510; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9000; }
+        .start-btn { padding: 15px 40px; background: none; color: var(--gold); border: 2px solid var(--gold); border-radius: 30px; font-size: 18px; cursor: pointer; }
 
-        .overlay-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: none; flex-direction: column; z-index: 8000; padding: 20px; box-sizing: border-box; }
-
-        /* バトル画面 */
-        #battle-screen { background: radial-gradient(circle, #1a1a3e, #000); }
-        .battle-stage { flex: 1; position: relative; width: 100%; overflow: hidden; }
-        .m-row { position: absolute; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; height: 26dvh; transition: transform 0.2s ease-out; }
-        .m-row.wild { top: 10dvh; }
-        .m-row.player { top: 42dvh; }
-        .atk-anim-p { transform: translateY(-90px) !important; }
-        .atk-anim-w { transform: translateY(90px) !important; }
-
-        .battle-img-box { position: relative; height: 100%; width: 45%; display: flex; align-items: center; justify-content: center; }
-        .battle-img { height: 100%; max-width: 100%; border: 2px solid #555; border-radius: 5px; background: #000; position: relative; z-index: 200; object-fit: contain; }
+        /* 共通画面設定 */
+        .overlay { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; z-index: 8000; padding: 20px; }
         
-        .hp-ui { background: rgba(255,255,255,0.92); color: #000; padding: 6px; border-radius: 6px; width: 125px; font-size: 10px; font-weight: bold; }
-        .hp-bar-bg { width: 100%; height: 8px; background: #ccc; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-        .hp-bar-fill { height: 100%; background: #2ecc71; width: 100%; transition: width 0.3s; }
-        .dmg-pop { position: absolute; font-size: 24px; font-weight: bold; color: #ff4d4d; text-shadow: 0 0 5px #000; animation: pop-up 0.8s forwards; z-index: 2000; }
-        @keyframes pop-up { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-70px); opacity: 0; } }
-
-        .deck-header { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid var(--gold); margin-bottom: 15px; text-align: center; }
-        #main-card-display { width: 110px; border: 2px solid var(--gold); border-radius: 5px; }
-        .deck-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; flex: 1; }
-        .card-box { aspect-ratio: 2/3; border: 2px solid #444; border-radius: 5px; overflow: hidden; background: #111; }
-        .card-box img { width: 100%; height: 100%; object-fit: cover; }
-        .card-box.selected { border-color: var(--gold); box-shadow: 0 0 10px var(--gold); }
-        .cmd-btn { background: #eee; border: 2px solid #888; border-radius: 5px; font-weight: bold; padding: 12px; color: #000; cursor: pointer; }
-
-        .mon-chip { border: 2px solid var(--gold); border-radius: 4px; background: #000; }
-        .lv-badge { position: absolute; top: -5px; right: -5px; background: #000; color: var(--gold); border: 1px solid var(--gold); font-size: 10px; padding: 1px 3px; border-radius: 3px; z-index: 10; }
+        /* モンスター表示 */
+        .mon-icon { border: 2px solid var(--gold); border-radius: 4px; background: #000; }
     </style>
 </head>
 <body>
 
-<div id="version-tag">Ver 1.5.2</div>
-<div id="mind-scan-overlay">マインドスキャン！！</div>
+<div id="scan-msg">マインドスキャン！！</div>
 
 <div id="top-screen">
-    <h1 class="top-title">Yu-Gi-Oh! GO</h1>
-    <button class="start-btn" onclick="startGame()">探索を開始</button>
-</div>
-
-<div id="loading-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:10000; display:none; flex-direction:column; align-items:center; justify-content:center;">
-    <div style="color:var(--gold); font-weight:bold;">魂を同調中…</div>
+    <h1 style="color:var(--gold); font-style:italic;">Yu-Gi-Oh! GO</h1>
+    <button class="start-btn" onclick="initGame()">探索開始</button>
 </div>
 
 <div id="map"></div>
-<div id="deck-btn-ui" class="ui-btn" onclick="openDeck()">DECK</div>
-<div id="shop-btn-ui" class="ui-btn" onclick="openShop()">SHOP</div>
-<div id="gps-btn-ui" class="ui-btn" onclick="mindScanUpdate()">
-    <img src="https://images.ygoprodeck.com/images/cards_small/60750341.jpg" alt="千年眼">
+
+<div id="deck-btn" class="ui-btn" style="display:none;" onclick="toggleScreen('deck-screen')">DECK</div>
+<div id="scan-btn" class="ui-btn" style="display:none;" onclick="runMindScan()">
+    <img src="https://images.ygoprodeck.com/images/cards_small/60750341.jpg">
 </div>
 
-<div id="battle-screen" class="overlay-screen">
-    <div id="battle-stage" class="battle-stage">
-        <div id="wild-row" class="m-row wild">
-            <div id="w-img-box" class="battle-img-box">
-                <img id="w-img" class="battle-img">
-                <div id="w-pop-point" style="position:absolute; top:0; width:100%; text-align:center;"></div>
-            </div>
-            <div class="hp-ui">
-                <div id="w-name">---</div>
-                <div id="w-atk" style="color:var(--red);">ATK: 0</div>
-                <div class="hp-bar-bg"><div id="w-hp-bar" class="hp-bar-fill"></div></div>
-                <div id="w-hp-txt" style="text-align:right;">0/0</div>
-            </div>
-        </div>
-        <div id="player-row" class="m-row player">
-            <div class="hp-ui">
-                <div id="p-name">---</div>
-                <div id="p-atk" style="color:var(--cyan);">ATK: 0</div>
-                <div class="hp-bar-bg"><div id="p-hp-bar" class="hp-bar-fill"></div></div>
-                <div id="p-hp-txt" style="text-align:right;">0/0</div>
-            </div>
-            <div id="p-img-box" class="battle-img-box">
-                <img id="p-img" class="battle-img" style="border-color:var(--cyan);">
-                <div id="p-pop-point" style="position:absolute; top:0; width:100%; text-align:center;"></div>
-            </div>
-        </div>
-    </div>
-    <div id="msg-box" style="height:45px; background:#fff; color:#000; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; margin:10px 0; text-align:center;"></div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-        <button class="cmd-btn" onclick="battleTurn('attack')">攻撃</button>
-        <button class="cmd-btn" onclick="battleTurn('seal')">封印</button>
-        <button class="cmd-btn" onclick="closeBattleUI()">逃げる</button>
-        <button class="cmd-btn" onclick="openDeck()">交代</button>
-    </div>
+<div id="deck-screen" class="overlay">
+    <h2 style="color:var(--gold); text-align:center;">DECK</h2>
+    <div id="deck-list" style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; overflow-y:auto; flex:1;"></div>
+    <button onclick="toggleScreen('deck-screen')" style="margin-top:20px; padding:10px;">閉じる</button>
 </div>
 
 <script>
-    let map, bData = { p: null, e: null, busy: false }, currentMarker;
-    let myDeck = JSON.parse(localStorage.getItem('myDeck') || '[{"name":"青眼の白龍","id":89631139,"img":"https://images.ygoprodeck.com/images/cards/89631139.jpg","atk":3000,"baseAtk":3000,"limitAtk":5000,"count":1,"missions":0}]');
-    let selectedIdx = -1;
-    let gameState = JSON.parse(localStorage.getItem('gameState') || '{"captureCount":0,"atkLimit":3000}');
-
-    // 確実に画像が存在するモンスターリスト (Ver 1.5.2 厳選)
-    const monsters = [
-        {id:89631139, atk:3000, name:"青眼の白龍"}, {id:46986414, atk:2500, name:"ブラック・マジシャン"}, {id:74677422, atk:2400, name:"真紅眼の黒竜"},
-        {id:70781052, atk:2500, name:"デーモンの召喚"}, {id:38033121, atk:2000, name:"BMガール"}, {id:95440946, atk:2500, name:"エルドリッチ"},
-        {id:44508094, atk:2500, name:"スターダスト"}, {id:15063914, atk:1400, name:"エルフの剣士"}, {id:11901678, atk:2100, name:"サイバー・ドラゴン"},
-        {id:24266245, atk:1400, name:"時の魔術師"}, {id:54056941, atk:3000, name:"カオス・ソルジャー"}, {id:78193831, atk:2600, name:"バスター・ブレイダー"}
+    let map;
+    const monsterLib = [
+        {id:89631139, name:"青眼の白龍", atk:3000},
+        {id:46986414, name:"ブラック・マジシャン", atk:2500},
+        {id:74677422, name:"真紅眼の黒竜", atk:2400},
+        {id:38033121, name:"ブラック・マジシャン・ガール", atk:2000},
+        {id:70781052, name:"デーモンの召喚", atk:2500},
+        {id:15063914, name:"エルフの剣士", atk:1400}
     ];
 
-    function startGame() {
+    function initGame() {
         document.getElementById('top-screen').style.display = 'none';
-        document.getElementById('loading-screen').style.display = 'flex';
-        setTimeout(initMap, 500);
-    }
-
-    function initMap() {
         navigator.geolocation.getCurrentPosition(pos => {
-            const lat = pos.coords.latitude, lon = pos.coords.longitude;
-            map = L.map('map', {zoomControl:false}).setView([lat, lon], 17);
+            const {latitude: lat, longitude: lon} = pos.coords;
+            map = L.map('map', {zoomControl: false}).setView([lat, lon], 16);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            map.whenReady(() => {
-                document.getElementById('loading-screen').style.display = 'none';
-                document.getElementById('map').style.visibility = 'visible';
-                document.querySelectorAll('.ui-btn').forEach(b => b.style.display = 'flex');
-                spawn(lat, lon);
-            });
-            map.on('moveend', () => spawn(map.getCenter().lat, map.getCenter().lng));
-        }, () => alert("GPSが必要です"), {timeout: 8000});
-    }
-
-    function spawn(lat, lon) {
-        if(!map) return;
-        map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
-        for(let i=0; i<25; i++) {
-            let m = monsters[Math.floor(Math.random()*monsters.length)];
-            let lv = Math.floor(Math.random()*15)+1;
-            const icon = L.divIcon({ className: 'mon-container', html: `<div style="position:relative;"><img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" style="width:40px; border:2px solid var(--gold); border-radius:4px;"><div class="lv-badge">Lv.${lv}</div></div>`, iconSize: [40, 40] });
-            L.marker([lat+(Math.random()-0.5)*0.015, lon+(Math.random()-0.5)*0.015], {icon: icon}).addTo(map).on('click', (e) => {
-                currentMarker = e.target; startBattle(m, lv);
-            });
-        }
-    }
-
-    function mindScanUpdate() {
-        const overlay = document.getElementById('mind-scan-overlay');
-        overlay.classList.add('mind-scan-active');
-        navigator.geolocation.getCurrentPosition(pos => {
-            spawn(pos.coords.latitude, pos.coords.longitude);
-            setTimeout(() => {
-                overlay.classList.remove('mind-scan-active');
-            }, 1000);
+            
+            document.getElementById('deck-btn').style.display = 'flex';
+            document.getElementById('scan-btn').style.display = 'flex';
+            
+            spawnMonsters(lat, lon);
         });
     }
 
-    function startBattle(m, lv) {
-        let wildAtk = m.atk + (lv-1)*500;
-        bData.e = { ...m, lv, hp: wildAtk+100, max: wildAtk+100, atk: wildAtk, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
-        bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
-        document.getElementById('battle-screen').style.display = 'flex';
-        updateBattleUI();
-        document.getElementById('msg-box').innerText = m.name + " 現る！";
-    }
+    function spawnMonsters(lat, lon) {
+        // 既存のマーカーを削除
+        map.eachLayer(layer => { if (layer instanceof L.Marker) map.removeLayer(layer); });
 
-    async function battleTurn(act) {
-        if(bData.busy) return; bData.busy = true;
-        if(act === 'attack') {
-            document.getElementById('player-row').classList.add('atk-anim-p');
-            await new Promise(r => setTimeout(r, 200));
-            bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk); updateBattleUI();
-            await new Promise(r => setTimeout(r, 150));
-            document.getElementById('player-row').classList.remove('atk-anim-p');
-            if(bData.e.hp <= 0) { document.getElementById('msg-box').innerText = "封印のチャンスだ！"; bData.busy = false; return; }
-        } else if(act === 'seal') {
-            if(Math.random() < 0.4 + (1 - bData.e.hp/bData.e.max)*0.6) {
-                if(myDeck[0].atk >= (myDeck[0].limitAtk || 5000)) {
-                    myDeck[0].missions = (myDeck[0].missions || 0) + 1;
-                    if(myDeck[0].missions >= 3) { myDeck[0].limitAtk += 2000; myDeck[0].missions = 0; }
-                }
-                saveCard(bData.e); alert("封印成功！"); closeBattleUI(); bData.busy = false; return;
-            }
-            document.getElementById('msg-box').innerText = "封印失敗！";
+        for(let i=0; i<20; i++) {
+            const m = monsterLib[Math.floor(Math.random() * monsterLib.length)];
+            const mLat = lat + (Math.random() - 0.5) * 0.01;
+            const mLon = lon + (Math.random() - 0.5) * 0.01;
+            
+            const icon = L.divIcon({
+                className: 'custom-icon',
+                html: `<img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" class="mon-icon" style="width:40px;">`,
+                iconSize: [40, 40]
+            });
+
+            L.marker([mLat, mLon], {icon: icon}).addTo(map).on('click', () => alert(m.name + " に遭遇した！（バトル機能は安定化のため調整中）"));
         }
-        document.getElementById('wild-row').classList.add('atk-anim-w');
-        await new Promise(r => setTimeout(r, 200));
-        bData.p.hp = Math.max(0, bData.p.hp - (bData.e.atk * 0.3)); updateBattleUI();
-        await new Promise(r => setTimeout(r, 150));
-        document.getElementById('wild-row').classList.remove('atk-anim-w');
-        if(bData.p.hp <= 0) { alert("敗北..."); closeBattleUI(); }
-        bData.busy = false;
     }
 
-    function updateBattleUI() {
-        document.getElementById('w-img').src = bData.e.img;
-        document.getElementById('w-atk').innerText = "ATK: " + bData.e.atk;
-        document.getElementById('w-hp-bar').style.width = (bData.e.hp/bData.e.max*100) + "%";
-        document.getElementById('w-hp-txt').innerText = Math.floor(bData.e.hp) + "/" + bData.e.max;
-        document.getElementById('p-img').src = bData.p.img;
-        document.getElementById('p-atk').innerText = "ATK: " + bData.p.atk;
-        document.getElementById('p-hp-bar').style.width = (bData.p.hp/bData.p.max*100) + "%";
-        document.getElementById('p-hp-txt').innerText = Math.floor(bData.p.hp) + "/" + bData.p.max;
+    // マインドスキャン：リロードせずにモンスターを再配置
+    function runMindScan() {
+        const msg = document.getElementById('scan-msg');
+        msg.style.display = 'block';
+        msg.style.animation = 'scan-fade 1.2s forwards';
+        
+        // 再配置
+        const center = map.getCenter();
+        spawnMonsters(center.lat, center.lng);
+
+        setTimeout(() => {
+            msg.style.display = 'none';
+            msg.style.animation = '';
+        }, 1200);
     }
 
-    function saveCard(m) {
-        myDeck.push({id:m.id, name:m.name, img:m.img, atk:m.atk, limitAtk:m.atk+2000, count:1, missions:0});
-        localStorage.setItem('myDeck', JSON.stringify(myDeck));
-    }
-
-    function openDeck() { document.getElementById('deck-screen').style.display = 'flex'; renderDeck(); }
-    function renderDeck() {
-        const grid = document.getElementById('deck-grid'); grid.innerHTML = '';
-        myDeck.forEach((m, i) => {
-            grid.innerHTML += `<div class="card-box ${selectedIdx === i ? 'selected' : ''}" onclick="selectedIdx=${i};renderDeck();"><img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg"></div>`;
-        });
-    }
-    function closeBattleUI() { document.getElementById('battle-screen').style.display = 'none'; if(currentMarker) map.removeLayer(currentMarker); }
-    function openShop() { document.getElementById('shop-screen').style.display = 'flex'; }
-    function dailyGet(id, name) {
-        saveCard({id, name, atk: 2500, img:`https://images.ygoprodeck.com/images/cards/${id}.jpg`});
-        alert(name + " 獲得！");
+    function toggleScreen(id) {
+        const el = document.getElementById(id);
+        el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+        if(id === 'deck-screen') {
+            const list = document.getElementById('deck-list');
+            list.innerHTML = monsterLib.map(m => `<div style="border:1px solid #444;"><img src="https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg" style="width:100%;"></div>`).join('');
+        }
     }
 </script>
-
-<div id="deck-screen" class="overlay-screen">
-    <h3>DECK</h3>
-    <div id="deck-grid" class="deck-grid"></div>
-    <button class="cmd-btn" onclick="document.getElementById('deck-screen').style.display='none'">閉じる</button>
-</div>
-
-<div id="shop-screen" class="overlay-screen">
-    <h2>SHOP</h2>
-    <button class="cmd-btn" onclick="dailyGet(89631139,'青眼')">青眼入手</button>
-    <button class="cmd-btn" onclick="document.getElementById('shop-screen').style.display='none'">戻る</button>
-</div>
-
 </body>
 </html>
