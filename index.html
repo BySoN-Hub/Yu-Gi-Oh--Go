@@ -11,7 +11,7 @@
         body { margin: 0; padding: 0; background: #000; font-family: sans-serif; overflow: hidden; height: 100dvh; width: 100vw; color: white; touch-action: manipulation; }
         #version-tag { position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.7); font-size: 10px; color: var(--gold); z-index: 2000000; padding: 2px 5px; border-radius: 3px; pointer-events: none; border: 1px solid rgba(255,215,0,0.3); }
 
-        #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; }
+        #map { width: 100%; height: 100%; position: absolute; z-index: 1; visibility: hidden; background: #000; }
         .mon-chip { border: 2px solid var(--gold); border-radius: 4px; object-fit: cover; background: #000; box-shadow: 0 0 10px rgba(255,215,0,0.5); }
         .lv-badge { position: absolute; top: -5px; right: -5px; background: #000; color: var(--gold); border: 1px solid var(--gold); font-size: 10px; padding: 1px 3px; border-radius: 3px; font-weight: bold; z-index: 10; }
         
@@ -67,7 +67,7 @@
 </head>
 <body>
 
-<div id="version-tag">Ver 1.1.9</div>
+<div id="version-tag">Ver 1.2.0</div>
 <audio id="bgm" loop></audio>
 
 <div id="loading-screen">
@@ -146,7 +146,7 @@
         const randomSong = bgmList[Math.floor(Math.random() * bgmList.length)];
         audio.src = randomSong;
         audio.volume = 0.3;
-        audio.play().catch(e => console.log("BGM Play Error"));
+        audio.play().catch(e => console.warn("BGM Play Error"));
     }
 
     const monsterLib = [
@@ -161,15 +161,28 @@
         document.getElementById('top-screen').style.display = 'none'; 
         document.getElementById('loading-screen').style.display = 'flex';
         playRandomBGM(); 
-        setTimeout(initMap, 100); 
+        
+        // わずかな遅延を置いて初期化することでUIのフリーズを防止
+        setTimeout(initMap, 500); 
     }
 
     function initMap() {
+        if (!navigator.geolocation) {
+            alert("位置情報がサポートされていません。");
+            resetUI();
+            return;
+        }
+
         navigator.geolocation.getCurrentPosition(pos => {
             const lat = pos.coords.latitude, lon = pos.coords.longitude;
+            
+            // 地図が未作成の場合のみ作成
             if (!map) {
-                map = L.map('map', {zoomControl:false, fadeAnimation: false}).setView([lat, lon], 17);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+                map = L.map('map', {zoomControl:false, fadeAnimation: false, markerZoomAnimation: false}).setView([lat, lon], 17);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+                
                 map.whenReady(() => {
                     spawn(lat, lon);
                     document.getElementById('loading-screen').style.display = 'none';
@@ -177,40 +190,52 @@
                     document.getElementById('deck-btn-ui').style.display = 'flex';
                     document.getElementById('gps-btn-ui').style.display = 'flex';
                 });
+
                 map.on('moveend', () => { spawn(map.getCenter().lat, map.getCenter().lng); });
             }
         }, err => {
-            alert("位置情報が取得できません。ブラウザの設定を確認してください。");
-            document.getElementById('loading-screen').style.display = 'none';
-            document.getElementById('top-screen').style.display = 'flex';
-        }, { timeout: 10000 });
+            alert("位置情報が取得できません。設定を確認してください。");
+            resetUI();
+        }, { timeout: 8000, enableHighAccuracy: true });
+    }
+
+    function resetUI() {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('top-screen').style.display = 'flex';
     }
 
     function spawn(lat, lon) {
+        if(!map) return;
         map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
         for(let i=0; i<40; i++) {
             let m = monsterLib[Math.floor(Math.random()*monsterLib.length)];
             let lv = Math.floor(Math.random()*10)+1;
             let imgUrl = `https://images.ygoprodeck.com/images/cards_small/${m.id}.jpg`;
-            let testImg = new Image();
-            testImg.onload = function() {
+            
+            // 非同期で画像チェックを行い、成功したものだけ表示
+            const img = new Image();
+            img.onload = () => {
                 const icon = L.divIcon({ className: 'mon-container', html: `<img src="${imgUrl}" class="mon-chip" style="width:40px;height:40px;"><div class="lv-badge">Lv.${lv}</div>`, iconSize: [40, 40] });
                 let marker = L.marker([lat+(Math.random()-0.5)*0.012, lon+(Math.random()-0.5)*0.012], {icon: icon}).addTo(map);
-                marker.on('click', () => {
-                    let bonus = (lv - 1) * 1000;
-                    let totalAtk = m.atk + bonus;
-                    let initialHP = (totalAtk <= 0) ? 100 + bonus : totalAtk;
-                    bData.e = { name: m.name, id: m.id, atk: totalAtk, baseAtk: m.atk, hp: initialHP, max: initialHP, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
-                    bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
-                    currentMarker = marker;
-                    document.getElementById('battle-screen').style.display = 'flex';
-                    document.getElementById('w-img').classList.remove('sucking');
-                    updateUI();
-                    document.getElementById('msg-text').innerText = `${bData.e.name}が現れた！`;
-                });
+                marker.on('click', () => startBattle(m, lv, marker));
             };
-            testImg.src = imgUrl;
+            img.src = imgUrl;
         }
+    }
+
+    function startBattle(m, lv, marker) {
+        let bonus = (lv - 1) * 1000;
+        let totalAtk = m.atk + bonus;
+        let initialHP = (totalAtk <= 0) ? 100 + bonus : totalAtk;
+        
+        bData.e = { name: m.name, id: m.id, atk: totalAtk, baseAtk: m.atk, hp: initialHP, max: initialHP, lv, img: `https://images.ygoprodeck.com/images/cards/${m.id}.jpg` };
+        bData.p = { ...myDeck[0], hp: myDeck[0].atk, max: myDeck[0].atk };
+        currentMarker = marker;
+        
+        document.getElementById('battle-screen').style.display = 'flex';
+        document.getElementById('w-img').classList.remove('sucking');
+        updateUI();
+        document.getElementById('msg-text').innerText = `${bData.e.name}が現れた！`;
     }
 
     function updateUI() {
@@ -233,7 +258,11 @@
             await new Promise(r => setTimeout(r, 600));
             bData.e.hp = Math.max(0, bData.e.hp - bData.p.atk);
             updateUI();
-            if(bData.e.hp <= 0) { document.getElementById('msg-text').innerText = "チャンス！カードに封印だ！"; document.getElementById('seal-btn').classList.add('btn-chance'); bData.busy = false; return; }
+            if(bData.e.hp <= 0) { 
+                document.getElementById('msg-text').innerText = "チャンス！カードに封印だ！"; 
+                document.getElementById('seal-btn').classList.add('btn-chance');
+                bData.busy = false; return; 
+            }
         } else if(act === 'seal') {
             document.getElementById('seal-base-card').style.display = 'block';
             document.getElementById('fusion-vortex').style.display = 'flex';
